@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fee500">
+<title>오픈채팅 현황</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23fee500'/%3E%3Cellipse cx='32' cy='29' rx='21' ry='17' fill='%233c1e1e'/%3E%3Cpath d='M24 42l-6 9 13-8z' fill='%233c1e1e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- 오픈채팅 현황판 템플릿. 생성·게시 = scripts/openchat_board.py · 설명 = docs/reference/openchat-board.md
+     데이터는 같은 폴더의 data/overview.json(10분마다 갱신) · icons.json(방 사진) 이다.
+     사람이 쓴 글(방 이름·닉네임)은 전부 esc() 를 거쳐 넣는다. -->
+<style>
+:root{
+  --kakao:#fee500; --brown:#3c1e1e; --bg:#f2f3f5; --card:#fff; --ink:#191b20; --ink-2:#454b55; --muted:#868c97;
+  --line:#ebedf0; --line-2:#dfe2e7; --hot:#ff4f3b; --hot-bg:#fff0ee; --amber:#f0a500; --bar:#c9ced6; --bar-today:#3c1e1e;
+  --blue:#2463c9; --blue-bg:#e9f0fd; --green:#12804e; --green-bg:#e5f5ec; --purple:#7446b8; --purple-bg:#f1eafb;
+  --gray-chip:#5d636d; --gray-chip-bg:#eef0f3; --warn:#b4541a; --warn-bg:#fff4e8;
+  --r:16px; --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font);letter-spacing:-.01em}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid #f0a500;outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+
+/* 잠금 */
+
+/* 상단 띠 */
+.bar{position:sticky;top:0;z-index:20;background:var(--kakao);color:var(--brown);padding:0 16px;padding-top:env(safe-area-inset-top)}
+.bar-in{max-width:1080px;margin:auto;height:56px;display:flex;align-items:center;gap:10px}
+.bar h1{font-size:18px;margin:0;letter-spacing:-.03em;font-weight:800;white-space:nowrap}
+.stamp{margin-left:auto;font-size:13px;font-weight:600;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stamp.late{color:#b3261e;opacity:1}
+.iconbtn{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:#0000000d;display:grid;place-items:center;color:var(--brown)}
+.iconbtn:hover{background:#0000001a}
+.iconbtn.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.wrap{max-width:1080px;margin:auto;padding:16px 16px 60px}
+.banner{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:12px;display:flex;gap:10px;align-items:center}
+.banner button{margin-left:auto;border:0;background:#fff;border-radius:9px;padding:7px 12px;font-weight:700;color:var(--warn);flex:none}
+
+/* 합계 */
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{background:var(--card);border-radius:var(--r);padding:16px 16px 14px;min-width:0}
+.stat .label{font-size:13px;color:var(--muted);font-weight:600}
+.stat .value{font-size:30px;font-weight:800;letter-spacing:-.04em;line-height:1.2;margin-top:4px}
+.stat .value small{font-size:16px;color:var(--muted);font-weight:700;letter-spacing:-.02em}
+.stat .sub{font-size:12.5px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 구역 제목 */
+.sec-head{display:flex;align-items:baseline;gap:8px;margin:26px 2px 10px}
+.sec-head h2{font-size:17px;margin:0;letter-spacing:-.03em}
+.sec-head .hint{font-size:13px;color:var(--muted)}
+
+/* 정원 임박 */
+.full{background:var(--card);border-radius:var(--r);overflow:hidden}
+.full-row{width:100%;border:0;background:transparent;text-align:left;display:flex;align-items:center;gap:12px;padding:12px 16px;min-height:72px}
+.full-row + .full-row{box-shadow:0 -1px 0 var(--line)}
+.full-row:hover{background:#f7f8fa}
+.full-main{flex:1;min-width:0}
+.full-name{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cap{height:8px;background:#eceef1;border-radius:4px;overflow:hidden;margin-top:8px}
+.cap i{display:block;height:100%;background:var(--amber);border-radius:4px}
+.cap.danger i{background:var(--hot)}
+.cap.ok i{background:var(--bar-today)}
+.full-sub{font-size:12.5px;color:var(--muted);margin-top:6px}
+.full-side{flex:none;text-align:right}
+.full-side b{display:block;font-size:22px;letter-spacing:-.04em;line-height:1.15}
+.full-side b small{font-size:12.5px;color:var(--muted);font-weight:600;letter-spacing:0}
+.left{font-size:12.5px;font-weight:700;color:var(--warn)}
+.left.danger{color:var(--hot)}
+.left.ok{color:var(--muted)}
+.cap-box .full-side{text-align:left}
+.mem{font-weight:700;color:var(--ink)}
+.mem.warn{color:var(--warn);background:var(--warn-bg);border-radius:5px;padding:0 5px}
+.mem.danger{color:#fff;background:var(--hot);border-radius:5px;padding:0 5px}
+
+/* 지금 붐비는 방 */
+.hot-row{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(200px,1fr);gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px;scrollbar-width:none}
+.hot-row::-webkit-scrollbar{display:none}
+.hot-card{scroll-snap-align:start;border:0;text-align:left;background:var(--card);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.hot-card:hover{box-shadow:0 0 0 2px var(--line-2) inset}
+.hot-top{display:flex;gap:10px;align-items:center;min-width:0}
+.hot-name{font-weight:700;font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-width:0}
+.hot-num{display:flex;align-items:baseline;gap:6px}
+.hot-num b{font-size:26px;letter-spacing:-.04em}
+.hot-num span{color:var(--muted);font-size:13px}
+.empty-line{background:var(--card);border-radius:var(--r);padding:16px;color:var(--muted);font-size:14px}
+
+/* 도구 */
+.tabs{display:flex;margin-top:26px;background:var(--bg);border-bottom:1px solid var(--line-2);position:sticky;top:calc(56px + env(safe-area-inset-top));z-index:11}
+.tab{flex:1;border:0;background:transparent;height:50px;font-size:16px;font-weight:700;color:var(--muted);position:relative;letter-spacing:-.02em;white-space:nowrap}
+.tab .count{font-size:13px;font-weight:600;margin-left:5px;color:var(--muted)}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tab[aria-selected="true"] .count{color:var(--ink-2)}
+.tab[aria-selected="true"]::after{content:'';position:absolute;left:14%;right:14%;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--brown)}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;background:var(--bg);padding:4px 0 8px}
+.legend{font-size:12.5px;color:var(--muted);margin:4px 2px 0}
+.delta{font-weight:700;font-size:12px}
+.delta.up{color:#12805c} .delta.down{color:#d13b3b} .delta.flat{color:var(--muted);font-weight:600}
+.stat .sub .delta{font-size:12.5px}
+.search{flex:1 1 220px;min-width:0;height:44px;border:1px solid var(--line-2);border-radius:12px;background:#fff;padding:0 14px 0 40px;font-size:15px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%23868c97' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m13 13 4 4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:14px center}
+.seg{display:flex;background:#e4e6ea;border-radius:12px;padding:3px;flex:none}
+.seg button{border:0;background:transparent;border-radius:9px;height:38px;padding:0 12px;font-size:14px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px #0000001a}
+
+/* 목록 */
+/* 많은 순서가 왼쪽→오른쪽, 위→아래로 읽히게 격자(열 나누기는 순서가 세로로 흘러 뒤섞여 보였다) */
+.groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+.group{background:var(--card);border-radius:var(--r);overflow:hidden;min-width:0}
+.group-head{display:flex;align-items:center;gap:10px;padding:14px 16px 6px}
+.group-title{font-weight:800;font-size:15.5px;letter-spacing:-.03em;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group-sum{margin-left:auto;font-size:13px;color:var(--muted);white-space:nowrap}
+.group-sum b{color:var(--ink);font-size:15px}
+.list{background:var(--card);border-radius:var(--r);overflow:hidden}
+.row{width:100%;border:0;background:transparent;text-align:left;display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:68px}
+.row:hover{background:#f7f8fa}
+.row + .row{box-shadow:0 -1px 0 var(--line)}
+.row.dim .row-title,.row.dim .avatar{opacity:.55}
+.avatar{flex:none;width:46px;height:46px;border-radius:16px;object-fit:cover;background:#e9ebee;display:grid;place-items:center;font-weight:800;font-size:17px;color:#fff;overflow:hidden}
+.avatar.lg{width:58px;height:58px;border-radius:20px;font-size:21px}
+.avatar.sm{width:38px;height:38px;border-radius:13px;font-size:15px}
+.row-main{flex:1;min-width:0}
+.row-title{display:flex;align-items:center;gap:6px;min-width:0}
+.row-title .name{font-weight:700;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.row-meta{display:flex;align-items:center;gap:8px;margin-top:3px;font-size:12.5px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden}
+.row-side{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.row-side b{font-size:20px;letter-spacing:-.04em;line-height:1.1}
+.row-side b.zero{color:#c3c7cf}
+.row-side span{font-size:11.5px;color:var(--muted)}
+.chip{flex:none;font-size:11.5px;font-weight:700;border-radius:6px;padding:2px 7px;line-height:1.45}
+.chip.notice{color:var(--blue);background:var(--blue-bg)} .chip.talk{color:var(--green);background:var(--green-bg)}
+.chip.premium{color:var(--purple);background:var(--purple-bg)} .chip.etc{color:var(--gray-chip);background:var(--gray-chip-bg)}
+.chip.hot{color:#fff;background:var(--hot)} .chip.warn{color:var(--warn);background:var(--warn-bg)}
+.pin-mark{color:var(--amber);font-size:13px;flex:none}
+.spark{display:inline-flex;align-items:flex-end;gap:2px;height:16px;flex:none}
+.spark i{display:block;width:4px;border-radius:1.5px;background:var(--bar)}
+.spark i.today{background:var(--bar-today)}
+.quiet{margin-top:14px}
+.quiet summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 16px;background:var(--card);border-radius:var(--r);font-weight:700;font-size:15px;min-height:52px}
+.quiet summary::-webkit-details-marker{display:none}
+.quiet summary .hint{font-weight:500;color:var(--muted);font-size:13px}
+.quiet summary::after{content:'';margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.quiet[open] summary::after{transform:rotate(-135deg)}
+.quiet[open] summary{border-radius:var(--r) var(--r) 0 0;box-shadow:0 1px 0 var(--line)}
+.quiet .list{border-radius:0 0 var(--r) var(--r)}
+.nothing{padding:40px 16px;text-align:center;color:var(--muted);background:var(--card);border-radius:var(--r)}
+.foot{margin-top:26px;font-size:12.5px;color:var(--muted);line-height:1.7;padding:0 4px}
+
+/* 상세 시트 */
+.backdrop{position:fixed;inset:0;background:#0f121866;z-index:40;opacity:0;transition:opacity .18s}
+.backdrop.show{opacity:1}
+.sheet{position:fixed;z-index:50;background:#fff;display:flex;flex-direction:column;
+  left:0;right:0;bottom:0;max-height:90vh;border-radius:22px 22px 0 0;transform:translateY(100%);transition:transform .22s ease;padding-bottom:env(safe-area-inset-bottom)}
+.sheet.show{transform:none}
+.sheet-grip{width:40px;height:5px;border-radius:3px;background:#d8dbe0;margin:8px auto 0;flex:none}
+.sheet-head{display:flex;gap:12px;align-items:center;padding:12px 18px 14px;border-bottom:1px solid var(--line);flex:none}
+.sheet-head .t{min-width:0;flex:1}
+.sheet-head .t h3{margin:0;font-size:17px;letter-spacing:-.03em;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+.sheet-head .t .chips{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+.closebtn{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:#f1f2f4;display:grid;place-items:center;align-self:flex-start}
+.sheet-body{overflow-y:auto;padding:16px 18px 24px;-webkit-overflow-scrolling:touch}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi{background:#f6f7f9;border-radius:12px;padding:10px 10px 9px;min-width:0}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:600}
+.kpi .v{font-size:20px;font-weight:800;letter-spacing:-.04em;margin-top:2px}
+.block{margin-top:22px}
+.block h4{margin:0 0 10px;font-size:14.5px;letter-spacing:-.02em;display:flex;align-items:baseline;gap:8px}
+.block h4 .hint{font-weight:500;color:var(--muted);font-size:12.5px}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.chart text{font-size:10px;fill:#9aa0aa;font-family:var(--font)}
+.chart .val{fill:var(--ink-2);font-weight:700}
+.caption{font-size:12.5px;color:var(--ink-2);min-height:19px;margin-top:6px}
+.mix{display:flex;height:12px;border-radius:6px;overflow:hidden;background:#eef0f3}
+.mix i{display:block;height:100%}
+.mix-legend{display:flex;gap:14px;margin-top:8px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
+.mix-legend span::before{content:'';display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;background:var(--c)}
+.talkers{display:grid;gap:8px}
+.talker{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;align-items:center;gap:8px;font-size:14px}
+.talker .rank{color:var(--muted);font-weight:700;text-align:center}
+.talker .who{min-width:0}
+.talker .who div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.talker .track{height:6px;border-radius:3px;background:#eef0f3;margin-top:4px;overflow:hidden}
+.talker .track i{display:block;height:100%;background:var(--amber);border-radius:3px}
+.talker b{text-align:right}
+.actions{display:flex;gap:8px;margin-top:24px}
+.btn{flex:1;height:48px;border-radius:12px;border:1px solid var(--line-2);background:#fff;font-weight:700;font-size:15px;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--kakao);border-color:var(--kakao);color:var(--brown)}
+.btn[aria-pressed="true"]{border-color:var(--amber);color:#9a6a00;background:#fff8e1}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px;margin-bottom:14px}
+
+/* 카페 미가입(요약 · 사람 명단은 cafe.html) */
+.cafe{background:var(--card);border-radius:var(--r);overflow:hidden}
+.cafe-kinds{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:14px 14px 4px}
+.cafe-kind{display:block;text-decoration:none;color:var(--ink);background:#f6f7f9;border-radius:12px;padding:10px 12px;min-width:0}
+.cafe-kind:hover{background:#eef0f3}
+.cafe-kind .l{display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;color:var(--ink-2);line-height:1.35}
+.cafe-kind .l i{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
+.cafe-kind b{display:block;font-size:24px;letter-spacing:-.04em;margin-top:4px}
+.cafe-kind b small{font-size:13px;color:var(--muted);font-weight:700}
+.cafe-note{font-size:12.5px;color:var(--muted);padding:6px 16px 10px}
+.cafe-row{width:100%;text-decoration:none;color:var(--ink);display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:64px;box-shadow:0 -1px 0 var(--line)}
+.cafe-row:hover{background:#f7f8fa}
+.cafe-row .full-main{flex:1;min-width:0}
+.cafe-row .side{flex:none;text-align:right}
+.cafe-row .side b{display:block;font-size:19px;letter-spacing:-.04em;line-height:1.15}
+.cafe-row .side span{font-size:11.5px;color:var(--muted)}
+.cafe-row.cafe-all{justify-content:center;flex-wrap:wrap;gap:4px 10px;font-weight:800;color:var(--brown);background:#fffbe0;min-height:56px}
+.cafe-row.cafe-all span{font-weight:500;font-size:12.5px;color:var(--muted)}
+.stack{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#eef0f3;margin-top:7px}
+.stack i{display:block;height:100%}
+.block .stack{margin-top:10px}
+@media (max-width:560px){ .cafe-kinds{grid-template-columns:minmax(0,1fr)} .cafe-kind{display:flex;align-items:center;gap:10px} .cafe-kind b{margin:0 0 0 auto;font-size:20px} }
+
+@media (min-width:900px){
+  .tools{position:sticky;top:107px;z-index:10}
+  .sheet{left:auto;top:0;bottom:0;right:0;width:460px;max-height:none;border-radius:22px 0 0 22px;transform:translateX(100%)}
+  .sheet.show{transform:none}
+  .sheet-grip{display:none}
+}
+@media (max-width:899px){ .groups{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:720px){
+  .summary{grid-template-columns:repeat(2,1fr);gap:8px}
+  .stat{padding:13px 14px 12px}
+  .stat .value{font-size:26px}
+  .tools{gap:6px}
+  .seg button{padding:0 10px;font-size:13.5px}
+}
+@media (max-width:420px){
+  .wrap{padding:12px 12px 48px}
+  .bar h1{font-size:17px}
+  .stamp{font-size:12px}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .row{padding:10px 12px;gap:10px}
+  .avatar{width:42px;height:42px;border-radius:14px}
+  .tab{font-size:14px;letter-spacing:-.04em}
+  .tab .count{font-size:12px;margin-left:3px}
+  .seg.sort{width:100%}
+  .seg.sort button{flex:1;padding:0 4px}
+  .meta-last,.sep:has(+ .meta-last){display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="bar">
+    <div class="bar-in">
+      <h1>오픈채팅 현황</h1>
+      <span class="stamp num" id="stamp">불러오는 중…</span>
+      <button class="iconbtn" id="reload" type="button" aria-label="다시 불러오기" title="다시 불러오기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="banner" id="banner" hidden><span id="banner-text"></span><button type="button" id="banner-retry">다시 시도</button></div>
+
+    <section class="summary" aria-label="합계">
+      <div class="stat"><div class="label">오늘 대화</div><div class="value num" id="s-today">–</div><div class="sub num" id="s-today-sub">&nbsp;</div></div>
+      <div class="stat"><div class="label">최근 1시간</div><div class="value num" id="s-hour">–</div><div class="sub" id="s-hour-sub">&nbsp;</div></div>
+      <div class="stat"><div class="label">오늘 입장</div><div class="value num" id="s-join">–</div><div class="sub num" id="s-join-sub">&nbsp;</div></div>
+      <div class="stat"><div class="label">전체 인원</div><div class="value num" id="s-members">–</div><div class="sub num" id="s-members-sub">&nbsp;</div></div>
+    </section>
+
+    <div class="sec-head"><h2>디하클 카페 미가입</h2><span class="hint num" id="cafe-hint"></span></div>
+    <div id="cafe"></div>
+
+    <div class="sec-head"><h2>정원 임박</h2><span class="hint num" id="full-hint"></span></div>
+    <div id="full"></div>
+
+    <div class="sec-head"><h2>지금 붐비는 방</h2><span class="hint">최근 1시간 대화 수</span></div>
+    <div id="hot"></div>
+
+    <div class="tabs" role="tablist" aria-label="방 묶음">
+      <button class="tab" type="button" role="tab" data-view="community" aria-selected="true">커뮤니티방<span class="count num" id="n-community"></span></button>
+      <button class="tab" type="button" role="tab" data-view="waiting" aria-selected="false">강사대기방<span class="count num" id="n-waiting"></span></button>
+      <button class="tab" type="button" role="tab" data-view="group" aria-selected="false">강의별<span class="count num" id="n-group"></span></button>
+      <button class="tab" type="button" role="tab" data-view="flat" aria-selected="false">전체 방<span class="count num" id="n-flat"></span></button>
+    </div>
+    <div class="tools" role="toolbar" aria-label="목록 도구">
+      <input class="search" id="q" type="search" placeholder="방·강의 이름 찾기" aria-label="방·강의 이름 찾기">
+      <div class="seg sort" role="group" aria-label="정렬">
+        <button type="button" data-sort="t" aria-pressed="true">오늘 많은 순</button>
+        <button type="button" data-sort="h1" aria-pressed="false">지금 붐비는 순</button>
+        <button type="button" data-sort="m" aria-pressed="false">인원 순</button>
+      </div>
+    </div>
+    <p class="legend">오른쪽 큰 숫자 = 오늘 대화 · <span class="delta up">▲</span><span class="delta down">▼</span> = 어제 같은 시각까지와 비교</p>
+
+    <div id="pins"></div>
+    <div id="list"></div>
+    <div id="quiet"></div>
+
+    <p class="foot">
+      숫자는 봇이 받은 카톡 기록에서 10분마다 다시 세요. «오늘»은 한국 시간 0시부터예요.<br>
+      대화 수에는 사람이 보낸 메시지만 들어가요. 우리 봇·카카오 안내 메시지와 입장·퇴장 알림은 빼요.<br>
+      인원은 지금 방에 있는 사람 수예요. 여러 방에 있는 사람은 방마다 한 번씩 세요.<br>
+      방을 누르면 시간대별 그래프, 많이 말한 사람, 원문 바로가기가 나와요.
+    </p>
+  </main>
+</div>
+
+<div class="backdrop" id="backdrop" hidden></div>
+<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-head" id="sheet-head"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</aside>
+
+<script>
+(() => {
+'use strict';
+
+const DATA_DIR = 'data';
+const PIN_KEY = 'openchat-board/pins';
+const PREF_KEY = 'openchat-board/prefs';
+const AUTO_MS = 120000;          // 화면을 보고 있을 때 다시 받는 간격(데이터는 10분마다 바뀐다)
+const LATE_MIN = 25;             // 기준 시각이 이보다 오래되면 «갱신 멈춤»으로 표시
+const KIND_ORDER = { '공지방': 0, '사담방': 1, '프리미엄방': 2 };
+const KIND_CLASS = { '공지방': 'notice', '사담방': 'talk', '프리미엄방': 'premium' };
+const AVATAR_COLORS = ['#f29d38', '#5b8def', '#3fb37f', '#b07ee8', '#ef6f6c', '#2fb3c4', '#d4a017', '#7f8c9d'];
+const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+// 카페 미가입 확인 화면(2026-10-19 2판 · 사람 명단은 비밀번호 잠금 · scripts/openchat_board.py cafePage)
+const CAFE_PAGE_URL = 'cafe.html';
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => (n == null ? '–' : Number(n).toLocaleString('ko-KR'));
+const store = {
+  get(key, empty) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : empty; } catch (e) { return empty; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } },
+};
+
+let data = null, icons = {}, iconsDay = '';
+// 탭 순서 = 사용자 지정(2026-10-19 «커뮤니티방 / 강의별 / 전체 방» + 같은 날 «관찰 현황판 방들은 강사대기방 — 따로 분류»)
+const VIEWS = ['community', 'waiting', 'group', 'flat'];
+let prefs = Object.assign({ view: 'community', sort: 't' }, store.get(PREF_KEY, {}));
+if (!VIEWS.includes(prefs.view)) prefs.view = 'community';  // 저장된 값이 옛 판·손상 값이면 첫 탭
+let pins = new Set(store.get(PIN_KEY, []));
+let query = '';
+let openKey = null, lastFocus = null, lastLoad = 0;
+
+/* ── 시각 ───────────────────────────────────────── */
+function kstParts(iso) {
+  const d = new Date(iso);
+  const k = new Date(d.getTime() + 9 * 3600000);
+  return { y: k.getUTCFullYear(), mo: k.getUTCMonth() + 1, d: k.getUTCDate(), h: k.getUTCHours(), mi: k.getUTCMinutes(), wd: k.getUTCDay(), ms: d.getTime() };
+}
+const hhmm = p => String(p.h).padStart(2, '0') + ':' + String(p.mi).padStart(2, '0');
+function ago(ms) {
+  const min = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  if (min < 1) return '방금';
+  if (min < 60) return min + '분 전';
+  const h = Math.floor(min / 60);
+  return h < 24 ? h + '시간 전' : Math.floor(h / 24) + '일 전';
+}
+function lastLabel(iso) {
+  if (!iso) return '';
+  const p = kstParts(iso), now = kstParts(new Date().toISOString());
+  if (p.y === now.y && p.mo === now.mo && p.d === now.d) return hhmm(p);
+  const days = Math.round((Date.UTC(now.y, now.mo - 1, now.d) - Date.UTC(p.y, p.mo - 1, p.d)) / 86400000);
+  return days === 1 ? '어제' : days + '일 전';
+}
+function dayLabel(ymd) { const [y, m, d] = ymd.split('-').map(Number); return d + '(' + WEEK[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] + ')'; }
+
+/* ── 데이터 ─────────────────────────────────────── */
+async function load(manual) {
+  const btn = $('reload');
+  btn.classList.add('spin');
+  try {
+    const res = await fetch(DATA_DIR + '/overview.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('overview.json 응답 ' + res.status);
+    const next = await res.json();
+    if (!next || !Array.isArray(next.rooms)) throw new Error('overview.json 형식이 올바르지 않아요');
+    data = next;
+    lastLoad = Date.now();
+    if (iconsDay !== data.today) await loadIcons();
+    $('banner').hidden = true;
+    render();
+    if (openKey) { const room = byKey(openKey); if (room) fillSheet(room); }
+  } catch (e) {
+    showBanner('숫자를 불러오지 못했어요 · ' + (e && e.message ? e.message : e));
+  } finally {
+    btn.classList.remove('spin');
+    if (manual && data) stamp();
+  }
+}
+async function loadIcons() {
+  // 방 사진은 하루 한 번 새로 받는다(바뀌는 일이 드물다). 실패하면 사진 자리에 이름 첫 글자를 쓰고, 그 사실을 띠에 남긴다.
+  try {
+    const res = await fetch(DATA_DIR + '/icons.json?d=' + data.today);
+    if (!res.ok) throw new Error('icons.json 응답 ' + res.status);
+    icons = (await res.json()).rooms || {};
+    iconsDay = data.today;
+  } catch (e) {
+    showBanner('방 사진을 불러오지 못했어요 · ' + (e && e.message ? e.message : e));
+  }
+}
+function showBanner(text) { $('banner-text').textContent = text; $('banner').hidden = false; }
+const byKey = key => data.rooms.find(r => r.k === key);
+const isQuiet = r => r.t === 0 && r.d7.every(v => v === 0);
+const shortName = r => r.c || r.n;  // 강의방은 머리말(사담방 등)을 칩으로 보여 주므로 강의 이름만
+
+/* ── 그리기 도구 ────────────────────────────────── */
+function avatar(r, size) {
+  const cls = 'avatar' + (size ? ' ' + size : '');
+  if (icons[r.k]) return `<img class="${cls}" src="${icons[r.k]}" alt="" loading="lazy">`;
+  const label = (shortName(r).replace(/[\[\](){}「」<>\s]/g, '') || '?').slice(0, 1);
+  let h = 0; for (const ch of r.k) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `<span class="${cls}" style="background:${AVATAR_COLORS[h % AVATAR_COLORS.length]}" aria-hidden="true">${esc(label)}</span>`;
+}
+const kindChip = r => r.kind ? `<span class="chip ${KIND_CLASS[r.kind] || 'etc'}">${esc(r.kind)}</span>` : '';
+function surging(r) { return r.h1 >= 10 && (r.base === 0 || r.h1 >= r.base * 2); }
+function surgeLabel(r) { return r.base > 0 ? '평소의 ' + (Math.round(r.h1 / r.base * 10) / 10) + '배' : '평소엔 조용한 시간'; }
+function stateChip(r) {
+  if (r.st === 'ok') return '';
+  return `<span class="chip warn">${r.st === 'nolog' ? '기록 없음' : '수집 끊김'}</span>`;
+}
+// 오늘 vs 어제 같은 시각까지(분 단위). pct=true 면 %로, 아니면 건수 차이로.
+function deltaHtml(now, before, pct) {
+  if (!before && !now) return '';
+  if (!before) return '<span class="delta up">새로</span>';
+  const diff = now - before;
+  if (diff === 0) return '<span class="delta flat">같음</span>';
+  const text = pct ? Math.abs(Math.round(diff / before * 100)) + '%' : fmt(Math.abs(diff));
+  return `<span class="delta ${diff > 0 ? 'up' : 'down'}">${diff > 0 ? '▲' : '▼'}${text}</span>`;
+}
+function spark(r) {
+  const vals = r.d7.concat([r.t]);
+  const max = Math.max(1, ...vals);
+  return '<span class="spark" aria-hidden="true">' + vals.map((v, i) =>
+    `<i class="${i === vals.length - 1 ? 'today' : ''}" style="height:${v ? Math.max(2, Math.round(v / max * 16)) : 1}px;${v ? '' : 'opacity:.5'}"></i>`).join('') + '</span>';
+}
+// 정원(data.cap = 설정 capacity) 대비 단계 — warnAt 이상 주황 · dangerAt 이상 빨강.
+const capLevel = m => m == null ? '' : m >= data.cap.dangerAt ? 'danger' : m >= data.cap.warnAt ? 'warn' : '';
+function memHtml(r) {
+  if (r.m == null) return '';
+  const lv = capLevel(r.m);
+  return `<span class="mem${lv ? ' ' + lv : ''}">인원 ${fmt(r.m)}${lv === 'danger' ? ' · 남은 ' + fmt(data.cap.max - r.m) : ''}</span>`;
+}
+const leftLabel = m => data.cap.max > m ? '남은 자리 ' + fmt(data.cap.max - m) : '정원 참';
+const capBar = (m, lv) => `<div class="cap ${lv || 'ok'}" role="img" aria-label="정원의 ${Math.round(m / data.cap.max * 100)}%"><i style="width:${Math.min(100, m / data.cap.max * 100)}%"></i></div>`;
+function row(r, opts) {
+  const o = opts || {};
+  // 강의 카드 안에서는 방 이름 앞 괄호(전체반·신규반·끝장반 …)를 그대로 쓴다 — 둘 다 «사담방»인 강의가 구분되게.
+  const prefix = (r.n.match(/^\s*\(([^()]+)\)/) || [])[1];
+  const title = o.kindOnly ? `<span class="name">${esc(prefix || r.kind || shortName(r))}</span>` : `${kindChip(r)}<span class="name">${esc(shortName(r))}</span>`;
+  const meta = [];
+  meta.push(spark(r));
+  // 인원을 맨 앞에 — 폰 폭에서 줄 끝이 잘려도 인원은 보이게(정원 4천 임박 확인용).
+  if (r.m != null) meta.push(memHtml(r));
+  if (r.h1) meta.push('1시간 ' + fmt(r.h1));
+  if (r.jn) meta.push('입장 ' + fmt(r.jn));
+  // 폰 폭에서는 «마지막 대화»를 숨긴다(줄 끝이 잘려 «마지막 0…»으로 보였다) — 방을 누르면 머리에 나온다.
+  if (r.last) meta.push('<span class="meta-last">마지막 ' + lastLabel(r.last) + '</span>');
+  const quiet = isQuiet(r);
+  return `<button type="button" class="row${quiet && o.dimQuiet ? ' dim' : ''}" data-room="${esc(r.k)}" aria-label="${esc(r.n)} 자세히">
+    ${avatar(r, o.kindOnly ? 'sm' : '')}
+    <div class="row-main">
+      <div class="row-title">${pins.has(r.k) ? '<span class="pin-mark" aria-label="즐겨찾기">★</span>' : ''}${title}${surging(r) ? '<span class="chip hot">급증</span>' : ''}${stateChip(r)}</div>
+      <div class="row-meta num">${meta.join('<span class="sep" aria-hidden="true">·</span>')}</div>
+    </div>
+    <div class="row-side"><b class="num${r.t ? '' : ' zero'}">${fmt(r.t)}</b><span class="num" title="어제 이 시각 ${fmt(r.ys)}건">${deltaHtml(r.t, r.ys, false) || '오늘'}</span></div>
+  </button>`;
+}
+
+/* ── 화면 ───────────────────────────────────────── */
+function stamp() {
+  if (!data) return;
+  const p = kstParts(data.generatedAt);
+  const late = (Date.now() - p.ms) / 60000 > LATE_MIN;
+  const el = $('stamp');
+  el.textContent = hhmm(p) + ' 기준 · ' + ago(p.ms) + (late ? ' · 갱신 멈춤?' : '');
+  el.classList.toggle('late', late);
+  el.title = late ? '10분마다 바뀌어야 하는데 ' + ago(p.ms) + ' 값이에요. PC의 현황판 작업을 확인해 주세요.' : '10분마다 새로 계산해요';
+}
+
+function render() {
+  stamp();
+  const t = data.totals, rooms = data.rooms;
+  $('s-today').textContent = fmt(t.today);
+  $('s-today-sub').innerHTML = '어제 이 시각 ' + fmt(t.yesterdaySoFar) + ' ' + deltaHtml(t.today, t.yesterdaySoFar, true);
+  $('s-hour').textContent = fmt(t.last1h);
+  const topHour = rooms.slice().sort((a, b) => b.h1 - a.h1)[0];
+  $('s-hour-sub').textContent = topHour && topHour.h1 ? '최다 · ' + shortName(topHour) + (topHour.kind ? ' ' + topHour.kind : '') : '최근 1시간은 조용해요';
+  $('s-join').textContent = fmt(t.joins);
+  $('s-join-sub').textContent = '퇴장 ' + fmt(t.leaves) + ' · 차이 ' + (t.joins - t.leaves >= 0 ? '+' : '') + fmt(t.joins - t.leaves);
+  $('s-members').textContent = fmt(t.members);
+  $('s-members-sub').innerHTML = '방 ' + fmt(t.rooms) + '개 · <span class="left' + (t.dangerFull ? ' danger' : '') + '">정원 임박 ' + fmt(t.nearFull) + '개</span>';
+  renderCafe();
+  renderFull();
+  renderHot();
+  renderList();
+}
+
+/* ── 카페 미가입(요약만 · 사람 명단은 전용 화면 cafe.html) ── */
+// 2026-10-19 1판(옆 시트 닉네임 목록) 반려 «제대로 들여다볼 수 있게» → 사람 명단·이유·활동은 cafe.html 에서 본다.
+const cafeOk = () => data.cafe && data.cafe.st === 'ok';
+const cfOk = r => r.cf && r.cf.st === 'ok';
+const cafeMiss = r => r.cf.ty + r.cf.pl;
+function cafeDate(iso) { const p = kstParts(iso); return p.mo + '/' + p.d + ' ' + hhmm(p); }
+function cafeStale() { return (Date.now() - new Date(data.cafe.rosterAt).getTime()) / 3600000 > data.cafe.staleHours; }
+const cafeLink = (key, f) => CAFE_PAGE_URL + (key || f ? '#' + new URLSearchParams(Object.assign(key ? { room: key } : {}, f ? { f } : {})).toString() : '');
+function cafeStack(c) {
+  const total = Math.max(1, c.checked);
+  return `<div class="stack" aria-hidden="true"><i style="width:${c.ty / total * 100}%;background:var(--hot)"></i><i style="width:${c.pl / total * 100}%;background:var(--amber)"></i><i style="width:${c.df / total * 100}%;background:#c9ced6"></i></div>`;
+}
+function cafeRow(r) {
+  return `<a class="cafe-row" href="${esc(cafeLink(r.k))}" aria-label="${esc(r.n)} 카페 미가입 확인">
+    ${avatar(r, 'sm')}
+    <div class="full-main"><div class="full-name">${kindChip(r)} ${esc(shortName(r))}</div>${cafeStack(r.cf)}
+      <div class="full-sub num">카페에 없음 ${fmt(r.cf.ty)} · 형식 불일치 ${fmt(r.cf.pl)} · 기본 ${fmt(r.cf.df)}</div></div>
+    <div class="side num"><b>${fmt(cafeMiss(r))}</b><span>${fmt(r.cf.checked)}명 중</span></div>
+  </a>`;
+}
+function renderCafe() {
+  if (!cafeOk()) {
+    $('cafe-hint').textContent = '';
+    $('cafe').innerHTML = '<div class="empty-line">카페 회원 명단을 아직 받지 못했어요. 받으면 여기에 방별 숫자가 나와요.</div>';
+    return;
+  }
+  const c = data.cafe;
+  $('cafe-hint').innerHTML = `카페 명단 ${cafeDate(c.rosterAt)} 기준${cafeStale() ? ' · <span class="left danger">오래된 명단</span>' : ''}`;
+  const rooms = data.rooms.filter(r => cfOk(r) && cafeMiss(r) > 0).sort((a, b) => cafeMiss(b) - cafeMiss(a));
+  const kinds = [['ty', '카페 닉네임을 적었는데 카페에 없음', 'var(--hot)'], ['pl', '카페 닉네임 형식 불일치', 'var(--amber)'], ['df', '카카오 기본 닉네임', '#c9ced6']];
+  $('cafe').innerHTML = `<div class="cafe">
+    <div class="cafe-kinds">${kinds.map(([f, label, color]) => `<a class="cafe-kind" href="${esc(cafeLink('', f))}" style="--c:${color}">
+      <span class="l"><i></i>${label}</span><b class="num">${fmt(c[f])}<small>명</small></b></a>`).join('')}</div>
+    <div class="cafe-note">방마다 센 합계예요(여러 방에 있는 사람은 방마다). 닉네임 읽은 ${fmt(c.checked)}명 기준${c.errorRooms ? ` · 못 읽은 방 ${c.errorRooms}개` : ''}.</div>
+    ${rooms.slice(0, 5).map(cafeRow).join('')}
+    <a class="cafe-row cafe-all" href="${esc(cafeLink())}">카페 미가입 확인 화면 열기 🔒 <span>미가입 후보 있는 방 ${rooms.length}개 · 사람별 이유·최근 대화</span></a>
+  </div>`;
+}
+function cafeBlock(r) {
+  if (!cafeOk()) return '';
+  if (!cfOk(r)) return '<div class="block"><h4>디하클 카페 미가입</h4><div class="note">이 방은 지금 인원 명단을 읽지 못했어요.</div></div>';
+  return `<div class="block"><h4>디하클 카페 미가입 <span class="hint num">카페 명단 ${cafeDate(data.cafe.rosterAt)} 기준</span></h4>
+    <div class="kpis">
+      <div class="kpi"><div class="l">카페에 없음</div><div class="v num" style="color:var(--hot)">${fmt(r.cf.ty)}</div></div>
+      <div class="kpi"><div class="l">형식 불일치</div><div class="v num">${fmt(r.cf.pl)}</div></div>
+      <div class="kpi"><div class="l">기본 닉네임</div><div class="v num">${fmt(r.cf.df)}</div></div>
+      <div class="kpi"><div class="l">닉네임 읽은 사람</div><div class="v num">${fmt(r.cf.checked)}</div></div>
+    </div>
+    ${cafeStack(r.cf)}
+    <a class="btn" href="${esc(cafeLink(r.k))}" style="margin-top:12px;width:100%">이 방 미가입 사람 보기 🔒</a></div>`;
+}
+
+function renderFull() {
+  const cap = data.cap;
+  $('full-hint').textContent = `정원 ${fmt(cap.max)}명 · ${fmt(cap.warnAt)}명 넘은 방`;
+  const list = data.rooms.filter(r => r.m != null && r.m >= cap.warnAt).sort((a, b) => b.m - a.m);
+  if (!list.length) { $('full').innerHTML = `<div class="empty-line">${fmt(cap.warnAt)}명 넘은 방이 없어요.</div>`; return; }
+  $('full').innerHTML = '<div class="full">' + list.map(r => {
+    const lv = capLevel(r.m), net = r.jn - r.lv;
+    return `<button type="button" class="full-row" data-room="${esc(r.k)}" aria-label="${esc(r.n)} 자세히">
+      ${avatar(r, 'sm')}
+      <div class="full-main">
+        <div class="full-name">${kindChip(r)} ${esc(shortName(r))}</div>
+        ${capBar(r.m, lv)}
+        <div class="full-sub num">오늘 입장 ${fmt(r.jn)} · 퇴장 ${fmt(r.lv)} · ${net >= 0 ? '+' : ''}${fmt(net)}명</div>
+      </div>
+      <div class="full-side num"><b>${fmt(r.m)}<small> / ${fmt(cap.max)}</small></b><span class="left ${lv}">${leftLabel(r.m)}</span></div>
+    </button>`;
+  }).join('') + '</div>';
+}
+
+function renderHot() {
+  const hot = data.rooms.filter(r => r.h1 > 0).sort((a, b) => b.h1 - a.h1 || b.t - a.t).slice(0, 6);
+  if (!hot.length) { $('hot').innerHTML = '<div class="empty-line">최근 1시간 동안 대화가 없어요.</div>'; return; }
+  $('hot').innerHTML = '<div class="hot-row">' + hot.map(r => `
+    <button type="button" class="hot-card" data-room="${esc(r.k)}" aria-label="${esc(r.n)} 자세히">
+      <div class="hot-top">${avatar(r, 'sm')}<div class="hot-name">${kindChip(r)} ${esc(shortName(r))}</div></div>
+      <div class="hot-num"><b class="num">${fmt(r.h1)}</b><span>건 / 1시간</span>${surging(r) ? `<span class="chip hot">${esc(surgeLabel(r))}</span>` : ''}</div>
+    </button>`).join('') + '</div>';
+}
+
+function matches(r) {
+  if (!query) return true;
+  const q = query.toLowerCase().replace(/\s+/g, '');
+  return (r.n + ' ' + r.c).toLowerCase().replace(/\s+/g, '').includes(q);
+}
+const metric = (r, key) => key === 'm' ? (r.m || 0) : r[key];
+
+const VIEW_LABEL = { community: '커뮤니티방', waiting: '강사대기방', group: '강의별', flat: '전체 방' };
+// 강사대기방(w) = 관찰대상방 목록 · 강의별 = 강의 묶음(g) · 커뮤니티방 = 둘 다 아닌 방. 생성기가 w 방의 g 를 비워 두 탭이 겹치지 않는다.
+const inView = (r, view) => view === 'flat' || (view === 'waiting' ? r.w : view === 'group' ? !!r.g : !r.g && !r.w);
+const byMetric = key => (a, b) => metric(b, key) - metric(a, key) || a.n.localeCompare(b.n, 'ko');
+
+function renderList() {
+  const key = prefs.sort, view = prefs.view;
+  const found = data.rooms.filter(matches);
+  // 탭 옆 숫자 = 그 탭의 방 수(찾는 중이면 찾은 방 수) — 다른 탭에 결과가 있는지 바로 보인다.
+  for (const v of VIEWS) $('n-' + v).textContent = fmt(found.filter(r => inView(r, v)).length);
+  const visible = found.filter(r => inView(r, view));
+  const pinned = visible.filter(r => pins.has(r.k)).sort(byMetric(key));
+  $('pins').innerHTML = pinned.length ? `<div class="sec-head"><h2>즐겨찾기</h2><span class="hint">${pinned.length}개</span></div><div class="list">${pinned.map(r => row(r)).join('')}</div>` : '';
+
+  let quiet = [];
+  let html = '';
+  if (view === 'group') {
+    const groups = new Map();
+    for (const r of visible) {
+      if (!groups.has(r.g)) groups.set(r.g, []);
+      groups.get(r.g).push(r);
+    }
+    const cards = [];
+    for (const list of groups.values()) {
+      if (list.every(isQuiet)) { quiet.push(...list); continue; }
+      list.sort((a, b) => (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9) || a.n.localeCompare(b.n, 'ko'));
+      const sum = list.reduce((s, r) => s + metric(r, key), 0);
+      const title = (list.find(r => r.kind === '공지방') || list[0]).c;
+      cards.push({ sum, title, list });
+    }
+    cards.sort((a, b) => b.sum - a.sum || a.title.localeCompare(b.title, 'ko'));
+    const unit = key === 'h1' ? '1시간' : key === 'm' ? '인원' : '오늘';
+    if (cards.length) {
+      html = `<div class="sec-head"><h2>강의방</h2><span class="hint">강의 ${cards.length}개</span></div><div class="groups">` + cards.map(c => `
+        <section class="group" aria-label="${esc(c.title)}">
+          <div class="group-head"><div class="group-title">${esc(c.title)}</div><div class="group-sum num">${unit} <b>${fmt(c.sum)}</b></div></div>
+          ${c.list.map(r => row(r, { kindOnly: true, dimQuiet: true })).join('')}
+        </section>`).join('') + '</div>';
+    }
+  } else {
+    const live = visible.filter(r => !isQuiet(r)).sort(byMetric(key));
+    quiet = visible.filter(isQuiet);
+    const title = VIEW_LABEL[view];
+    if (live.length) html = `<div class="sec-head"><h2>${title}</h2><span class="hint">${live.length}개</span></div><div class="list">${live.map(r => row(r)).join('')}</div>`;
+  }
+  if (!html && !quiet.length) {
+    const elsewhere = VIEWS.filter(v => v !== view && found.some(r => inView(r, v)));
+    html = query
+      ? `<div class="nothing">«${esc(query)}»에 맞는 방이 이 탭에 없어요.${elsewhere.length ? `<br>«${VIEW_LABEL[elsewhere[0]]}» 탭에 있어요.` : ''}</div>`
+      : '<div class="nothing">이 탭에 보여 줄 방이 없어요.</div>';
+  }
+  $('list').innerHTML = html;
+  const wasOpen = $('quiet').querySelector('details')?.open;
+  quiet.sort((a, b) => (b.m || 0) - (a.m || 0) || a.n.localeCompare(b.n, 'ko'));
+  $('quiet').innerHTML = quiet.length ? `<details class="quiet"${wasOpen || (query && !html) ? ' open' : ''}><summary>조용한 방 ${quiet.length}개 <span class="hint">7일 동안 대화 없음</span></summary><div class="list">${quiet.map(r => row(r)).join('')}</div></details>` : '';
+}
+
+/* ── 상세 시트 ──────────────────────────────────── */
+function hourChart(r) {
+  const nowH = kstParts(data.generatedAt).h;
+  const max = Math.max(1, ...r.hr);
+  const W = 336, H = 110, top = 16, base = 92, bw = W / 24;
+  let out = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="오늘 시간대별 대화 수">`;
+  out += `<line x1="0" y1="${base + .5}" x2="${W}" y2="${base + .5}" stroke="#e4e7eb"/>`;
+  r.hr.forEach((v, h) => {
+    const x = h * bw + 1.5, w = bw - 3;
+    if (h > nowH) { out += `<rect x="${x}" y="${base - 3}" width="${w}" height="3" rx="1.5" fill="#eef0f3"/>`; return; }
+    const hh = v ? Math.max(3, (v / max) * (base - top)) : 2;
+    const fill = h === nowH ? 'var(--amber)' : v ? 'var(--bar-today)' : '#dfe2e7';
+    out += `<rect class="hbar" data-h="${h}" data-v="${v}" x="${x}" y="${base - hh}" width="${w}" height="${hh}" rx="2" fill="${fill}"><title>${h}시 · ${v}건</title></rect>`;
+    if (v === max && v > 0) out += `<text class="val" x="${x + w / 2}" y="${base - hh - 4}" text-anchor="middle">${v}</text>`;
+  });
+  [0, 6, 12, 18].forEach(h => { out += `<text x="${h * bw + bw / 2}" y="${H - 4}" text-anchor="middle">${h}시</text>`; });
+  out += `<text x="${23 * bw + bw / 2}" y="${H - 4}" text-anchor="middle">23시</text>`;
+  return out + '</svg>';
+}
+function dayChart(r) {
+  const vals = r.d7.concat([r.t]);
+  const labels = data.days.concat([data.today]).map(dayLabel);
+  const max = Math.max(1, ...vals);
+  const W = 336, H = 124, top = 18, base = 100, bw = W / vals.length;
+  let out = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 8일 하루 대화 수">`;
+  out += `<line x1="0" y1="${base + .5}" x2="${W}" y2="${base + .5}" stroke="#e4e7eb"/>`;
+  vals.forEach((v, i) => {
+    const today = i === vals.length - 1;
+    const w = Math.min(26, bw - 10), x = i * bw + (bw - w) / 2;
+    const hh = v ? Math.max(3, (v / max) * (base - top)) : 2;
+    out += `<rect x="${x}" y="${base - hh}" width="${w}" height="${hh}" rx="3" fill="${today ? 'var(--amber)' : v ? 'var(--bar)' : '#e4e7eb'}"><title>${labels[i]} · ${v}건</title></rect>`;
+    out += `<text class="val" x="${x + w / 2}" y="${base - hh - 4}" text-anchor="middle">${v >= 1000 ? (Math.round(v / 100) / 10) + '천' : v}</text>`;
+    out += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle"${today ? ' style="fill:var(--ink);font-weight:700"' : ''}>${today ? '오늘' : labels[i]}</text>`;
+  });
+  return out + '</svg>';
+}
+function fillSheet(r) {
+  const meta = [];
+  if (r.last) meta.push('마지막 대화 ' + lastLabel(r.last));
+  $('sheet-head').innerHTML = `${avatar(r, 'lg')}
+    <div class="t"><h3 id="sheet-title">${esc(r.n)}</h3><div class="chips">${kindChip(r)}${surging(r) ? `<span class="chip hot">급증 · ${esc(surgeLabel(r))}</span>` : ''}${stateChip(r)}<span class="num">${memHtml(r)}${meta.length ? ' · ' + esc(meta.join(' · ')) : ''}</span></div></div>
+    <button type="button" class="closebtn" id="sheet-close" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+  const mixTotal = r.tt.reduce((s, v) => s + v, 0);
+  const mixColors = ['#3c1e1e', '#f0a500', '#5b8def', '#c9ced6'];
+  const mix = mixTotal ? `<div class="mix" aria-hidden="true">${r.tt.map((v, i) => v ? `<i style="width:${v / mixTotal * 100}%;background:${mixColors[i]}"></i>` : '').join('')}</div>
+    <div class="mix-legend num">${['글', '사진', '이모티콘', '기타'].map((l, i) => `<span style="--c:${mixColors[i]}">${l} ${fmt(r.tt[i])}</span>`).join('')}</div>` : '<div class="note">오늘은 아직 대화가 없어요.</div>';
+  const maxTalk = r.top.length ? r.top[0][1] : 1;
+  const talkers = r.top.length ? `<div class="talkers">${r.top.map((t, i) => `
+      <div class="talker"><span class="rank num">${i + 1}</span><div class="who"><div>${esc(t[0])}</div><div class="track"><i style="width:${t[1] / maxTalk * 100}%"></i></div></div><b class="num">${fmt(t[1])}</b></div>`).join('')}</div>`
+    : '<div class="note">오늘 말한 사람이 아직 없어요.</div>';
+  const warn = r.st === 'ok' ? '' : `<div class="warnbox">${r.st === 'nolog' ? '이 방은 봇 기록 폴더가 없어요. 숫자를 셀 수 없어 0으로 보여요.' : '이 방은 수집이 끊겨 있어요. 숫자가 실제보다 적을 수 있어요.'}</div>`;
+  const pinned = pins.has(r.k);
+  $('sheet-body').innerHTML = `${warn}
+    <div class="kpis">
+      <div class="kpi"><div class="l">오늘</div><div class="v num">${fmt(r.t)}</div></div>
+      <div class="kpi"><div class="l">어제 이 시각</div><div class="v num">${fmt(r.ys)}</div></div>
+      <div class="kpi"><div class="l">최근 1시간</div><div class="v num">${fmt(r.h1)}</div></div>
+      <div class="kpi"><div class="l">7일 평균</div><div class="v num">${fmt(r.a7)}</div></div>
+    </div>
+    <div class="note num">어제 하루 ${fmt(r.y)}건 · 오늘 입장 ${fmt(r.jn)}명 · 퇴장 ${fmt(r.lv)}명</div>
+    ${r.m == null ? '' : `<div class="block cap-box"><h4>인원 <span class="hint num">정원 ${fmt(data.cap.max)}명</span></h4>
+      <div class="full-side num"><b>${fmt(r.m)}<small> / ${fmt(data.cap.max)}</small></b><span class="left ${capLevel(r.m) || 'ok'}">${leftLabel(r.m)}</span></div>
+      ${capBar(r.m, capLevel(r.m))}</div>`}
+    ${cafeBlock(r)}
+    <div class="block"><h4>오늘 시간대별 <span class="hint">막대를 누르면 숫자가 보여요</span></h4>${hourChart(r)}<div class="caption num" id="hour-cap">${r.base ? '평소 이 시간 ' + fmt(r.base) + '건 · 지금 ' + fmt(r.h1) + '건' : '&nbsp;'}</div></div>
+    <div class="block"><h4>최근 8일</h4>${dayChart(r)}</div>
+    <div class="block"><h4>오늘 대화 종류</h4>${mix}</div>
+    <div class="block"><h4>오늘 많이 말한 사람 <span class="hint">봇 제외 · 상위 5명</span></h4>${talkers}</div>
+    <div class="actions">
+      ${r.talk ? `<a class="btn primary" href="${esc(data.talkUrl)}#room=${encodeURIComponent(r.k)}" target="_blank" rel="noopener">톡방 원문 보기 ↗</a>` : ''}
+      <button type="button" class="btn" id="pin-btn" aria-pressed="${pinned}">${pinned ? '★ 즐겨찾기 해제' : '☆ 즐겨찾기'}</button>
+    </div>
+    ${r.talk ? '' : '<div class="note">이 방은 톡방 원문 사이트에서 보관하지 않아요(강의방만 보관해요).</div>'}`;
+  $('sheet-close').onclick = closeSheet;
+  $('pin-btn').onclick = () => {
+    if (pins.has(r.k)) pins.delete(r.k); else pins.add(r.k);
+    if (!store.set(PIN_KEY, [...pins])) showBanner('이 브라우저는 즐겨찾기를 저장하지 못해요(사생활 보호 모드 등).');
+    fillSheet(r); renderList();
+  };
+  $('sheet-body').querySelectorAll('.hbar').forEach(bar => bar.addEventListener('click', () => {
+    $('hour-cap').textContent = bar.dataset.h + '시 · ' + fmt(Number(bar.dataset.v)) + '건';
+  }));
+}
+function openSheet(key) {
+  const r = byKey(key);
+  if (!r) return;
+  openKey = key;
+  fillSheet(r);
+  revealSheet();
+}
+function revealSheet() {
+  const sheet = $('sheet'), back = $('backdrop');
+  if (sheet.hidden) lastFocus = document.activeElement;
+  sheet.hidden = false; back.hidden = false;
+  document.body.style.overflow = 'hidden';
+  requestAnimationFrame(() => { sheet.classList.add('show'); back.classList.add('show'); $('sheet-close').focus(); });
+  $('sheet-body').scrollTop = 0;
+}
+function closeSheet() {
+  const sheet = $('sheet'), back = $('backdrop');
+  if (sheet.hidden) return;
+  openKey = null;
+  sheet.classList.remove('show'); back.classList.remove('show');
+  document.body.style.overflow = '';
+  setTimeout(() => { if (!openKey) { sheet.hidden = true; back.hidden = true; } }, 230);
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+
+/* ── 시작 ───────────────────────────────────────── */
+function bind() {
+  document.addEventListener('click', ev => {
+    const hit = ev.target.closest('[data-room]');
+    if (hit && !hit.closest('#sheet')) openSheet(hit.dataset.room);
+  });
+  $('backdrop').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeSheet(); });
+  $('reload').addEventListener('click', () => load(true));
+  $('banner-retry').addEventListener('click', () => load(true));
+  $('q').addEventListener('input', ev => { query = ev.target.value.trim(); if (data) renderList(); });
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => { prefs.view = b.dataset.view; savePrefs(); }));
+  document.querySelectorAll('[data-sort]').forEach(b => b.addEventListener('click', () => { prefs.sort = b.dataset.sort; savePrefs(); }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastLoad > 60000) load(false); });
+  setInterval(() => { if (!document.hidden) load(false); }, AUTO_MS);
+  setInterval(stamp, 30000);
+}
+function syncPrefs() {
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === prefs.view)));
+  document.querySelectorAll('[data-sort]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sort === prefs.sort)));
+}
+function savePrefs() { store.set(PREF_KEY, prefs); syncPrefs(); if (data) renderList(); }
+let started = false;
+function start() { if (started) return; started = true; syncPrefs(); bind(); load(false); }
+
+start();
+})();
+</script>
+</body>
+</html>
