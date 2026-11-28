@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fee500">
+<title>카페 미가입 확인</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23fee500'/%3E%3Cellipse cx='32' cy='29' rx='21' ry='17' fill='%233c1e1e'/%3E%3Cpath d='M24 42l-6 9 13-8z' fill='%233c1e1e'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<!-- 시안 B «업무 표» — 왼쪽 방·조건 · 오른쪽 한 장의 표(머리를 눌러 정렬) · 폰은 카드 + 많은 방 칩(2026-10-19 디자인 시안 r2) -->
+<style>
+:root{
+  --kakao:#fee500; --brown:#3c1e1e; --bg:#f3f4f6; --card:#fff; --ink:#17191d; --ink-2:#464c56; --muted:#7d838d; --line:#eceef1; --line-2:#dcdfe4;
+  --red:#e0362b; --red-bg:#fdecea; --amber:#d98200; --amber-bg:#fff3df; --gray:#6b717b; --gray-bg:#eef0f3; --blue:#2463c9; --blue-bg:#e8effc; --green:#12804e;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --tap:44px;
+}
+*{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--font);letter-spacing:-.01em}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid #f0a500;outline-offset:1px}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+
+/* 머리말 */
+.bar{position:sticky;top:0;z-index:30;background:var(--kakao);color:var(--brown);padding-top:env(safe-area-inset-top)}
+.bar-in{height:52px;display:flex;align-items:center;gap:6px;padding:0 16px 0 8px}
+.back{width:var(--tap);height:var(--tap);border-radius:10px;display:grid;place-items:center;color:var(--brown)}
+.back:hover{background:#0000000f}
+.bar h1{margin:0;font-size:17px;font-weight:800;white-space:nowrap}
+
+/* 틀 */
+.layout{display:grid;grid-template-columns:284px minmax(0,1fr);min-height:calc(100vh - 52px)}
+body.locked .layout{grid-template-columns:minmax(0,1fr)}
+body.locked .main{width:100%;max-width:600px;margin:0 auto}
+body.locked .lock{max-width:none;margin-top:4px}
+.main{padding:16px 18px 48px;min-width:0}
+
+/* 위 숫자(구분 3칸 + 한 줄 요약) */
+.top{display:flex;gap:16px;align-items:center;margin-bottom:14px}
+.mkpis{display:grid;grid-template-columns:repeat(3,minmax(0,170px));gap:8px;flex:none}
+.mk{background:var(--card);border-radius:12px;padding:9px 12px;border:2px solid var(--line);text-align:left;min-height:64px;display:flex;flex-direction:column;justify-content:center}
+.mk:hover{border-color:var(--line-2)}
+.mk[aria-pressed="true"]{border-color:var(--brown);background:#fff}
+.mk .l{font-size:12.5px;color:var(--ink-2);font-weight:700;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.mk .ck{width:16px;height:16px;border-radius:4px;border:2px solid var(--c);flex:none;display:grid;place-items:center}
+.mk[aria-pressed="true"] .ck{background:var(--c)}
+.mk[aria-pressed="true"] .ck::after{content:'';width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:translateY(-1px) rotate(45deg)}
+.mk b{font-size:21px;font-weight:800;letter-spacing:-.03em;line-height:1.25}
+.mk b .u,.rp .ct b .u,.tr .u{font-size:.68em;font-weight:700;margin-left:1px;letter-spacing:0}
+.mk small{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;line-height:1.3}
+body.locked .mk{pointer-events:none;cursor:default;border-color:var(--line)}
+body.locked .mk .ck{width:8px;height:8px;border:0;border-radius:2px;background:var(--c)}
+body.locked .mk .ck::after{display:none}
+.sum{min-width:0;font-size:13px;color:var(--ink-2);line-height:1.55}
+.sum b{color:var(--ink);font-weight:700}
+.sum .st{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.sum .st .late{color:#b3261e;font-weight:700}
+.sum .act{display:block;margin-top:6px;font-size:12.5px;color:var(--ink-2)}
+.sum .act b{color:var(--ink)}
+.sum .act .nw{white-space:nowrap}
+body.locked .top{flex-direction:column;align-items:stretch}
+body.locked .mkpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* 잠금 */
+.lock{background:var(--card);border-radius:14px;padding:32px 20px;text-align:center;max-width:460px;margin:8px auto 0;border:1px solid var(--line)}
+.lock h2{margin:0;font-size:18px}
+.lock p{margin:6px 0 16px;color:var(--muted)}
+.lock form{display:grid;gap:8px;max-width:300px;margin:auto}
+.lock input[type=password]{height:52px;border:1px solid var(--line-2);border-radius:10px;font-size:20px;text-align:center;letter-spacing:.3em}
+.lock input[type=password]:placeholder-shown{letter-spacing:0;font-size:16px}
+.lock .err{color:var(--red);font-size:13px;min-height:19px}
+.lock label{font-size:13.5px;color:var(--ink-2);display:flex;gap:8px;justify-content:center;align-items:center;min-height:var(--tap);cursor:pointer}
+.lock label input{width:18px;height:18px;margin:0;accent-color:var(--brown)}
+
+/* 버튼·입력 */
+.btn{min-height:var(--tap);border:1px solid var(--line-2);background:#fff;border-radius:10px;padding:0 14px;font-weight:700;font-size:13.5px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:hover{background:#f6f7f9}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--kakao);border-color:var(--kakao);color:var(--brown);min-height:50px;font-size:15px}
+.btn.dark{background:var(--brown);border-color:var(--brown);color:#fff}
+.btn.dark:hover{background:#2a1515}
+.btn .bd{background:var(--red);color:#fff;border-radius:9px;font-size:11.5px;min-width:18px;height:18px;padding:0 5px;display:inline-grid;place-items:center}
+.input{width:100%;height:var(--tap);border:1px solid var(--line-2);border-radius:10px;padding:0 12px;font-size:14px;background:#fff}
+select.input{padding-right:28px}
+
+/* 왼쪽 레일 */
+.rail{background:var(--card);border-right:1px solid var(--line);position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;padding:12px 14px 28px}
+.rail h3{font-size:12.5px;color:var(--muted);font-weight:700;margin:18px 4px 4px;letter-spacing:0}
+.rail h3:first-of-type{margin-top:4px}
+.opt{display:flex;align-items:center;gap:10px;min-height:var(--tap);padding:0 8px;border-radius:10px;cursor:pointer;font-weight:600}
+.opt:hover{background:#f6f7f9}
+.opt.off{color:#a9aeb6;cursor:default}
+.opt.off:hover{background:none}
+.opt input{margin:0;accent-color:var(--brown);width:18px;height:18px;flex:none}
+.opt .c{margin-left:auto;color:var(--ink-2);font-weight:700;font-size:13px}
+.opt i{width:9px;height:9px;border-radius:2px;background:var(--c);flex:none}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);background:#e9ebee;border-radius:11px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;border-radius:8px;min-height:var(--tap);font-size:13px;font-weight:600;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px #0000001f}
+.roompick{margin-top:8px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rp{width:100%;display:flex;align-items:center;gap:10px;border:0;background:#fff;min-height:52px;padding:6px 10px;text-align:left;border-bottom:1px solid var(--line)}
+.rp:last-child{border-bottom:0}
+.rp:hover{background:#f8f9fb}
+.rp[aria-current="true"]{background:#fffbe0;box-shadow:inset 3px 0 0 var(--brown)}
+.rp .nm{flex:1;min-width:0;font-size:13.5px;font-weight:600;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all;overflow-wrap:anywhere}
+.rp .ct{flex:none;text-align:right;line-height:1.2}
+.rp .ct b{display:block;font-size:14.5px;font-weight:800}
+.rp .ct small{font-size:11.5px;color:var(--muted);font-weight:600}
+.rp .ct small.hot,.rp .ct b.hot{color:var(--red)}
+.chip{display:inline-block;font-size:11px;font-weight:700;border-radius:5px;padding:0 5px;margin-right:4px;line-height:17px;vertical-align:1px;white-space:nowrap}
+.chip.notice{background:var(--blue-bg);color:var(--blue)}
+.chip.talk{background:#e6f5ec;color:var(--green)}
+.chip.premium{background:#f3e9fc;color:#7b3fb5}
+.chip.etc{background:var(--gray-bg);color:var(--gray)}
+.rail-head{display:none}
+/* 방 순서 — 많은 순 / 비율순 */
+.rh{display:flex;align-items:center;gap:8px;margin:14px 0 6px 4px}
+.rh h3{margin:0!important;flex:1;min-width:0}
+.rank{display:inline-grid;grid-template-columns:1fr 1fr;background:#e9ebee;border-radius:10px;padding:2px;gap:2px;flex:none}
+.rank button{border:0;background:transparent;border-radius:8px;min-height:40px;min-width:62px;padding:0 8px;font-size:12.5px;font-weight:700;color:var(--ink-2)}
+.rank button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 2px #0000001f}
+/* PC — 위 조건은 고정, 방 목록만 따로 내려간다 */
+@media (min-width:901px){
+  .rail{display:flex;flex-direction:column;overflow:hidden;padding-bottom:14px}
+  .rail>*{flex:none}
+  .rail .roompick{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+}
+
+/* 본문 머리 */
+.head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.head .tt{flex:1 1 200px;min-width:0}
+.head h2{margin:0;font-size:19px;letter-spacing:-.02em;line-height:1.3;word-break:keep-all;overflow-wrap:anywhere}
+.head .meta{color:var(--muted);font-size:13px}
+.head .acts{display:flex;gap:8px;margin-left:auto}
+.filt-btn{display:none!important}
+
+/* 많은 방 칩(폰) — 위 3개를 한 줄에 다 보이게(옆으로 넘기지 않는다) */
+.toprooms{display:none}
+.tr-hd{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.tr-h{flex:1;min-width:0;font-size:12.5px;color:var(--muted);font-weight:700;margin:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-hd .rank button{min-height:44px;min-width:58px}
+.tr-all{flex:none;min-height:44px;border:1px solid var(--line-2);background:#fff;border-radius:10px;padding:0 10px;font-size:13px;font-weight:700;white-space:nowrap}
+.tr-all b{font-weight:800}
+.tr-all[aria-current="true"]{background:var(--brown);border-color:var(--brown);color:#fff}
+.tr-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tr{min-width:0;min-height:62px;display:flex;flex-direction:column;justify-content:center;gap:2px;border:1px solid var(--line-2);background:#fff;border-radius:12px;padding:6px 7px;text-align:left;line-height:1.3}
+.tr .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12.5px;font-weight:700;word-break:keep-all;overflow-wrap:anywhere}
+.tr .sub .chip{font-size:10.5px;line-height:15px;padding:0 3px;margin-right:3px;vertical-align:1px}
+.tr .sub .rt{margin-left:4px}
+.tr[aria-current="true"] .sub .chip{background:#ffffff26;color:#fff}
+.tr .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr .sub b{font-weight:800;color:var(--ink);font-size:12.5px}
+.tr .sub .hot{color:var(--red);font-weight:800}
+.tr[aria-current="true"]{background:var(--brown);border-color:var(--brown);color:#fff}
+.tr[aria-current="true"] .sub{color:#ffffffc0}
+.tr[aria-current="true"] .sub b{color:#fff}
+.tr[aria-current="true"] .sub .hot{color:var(--kakao)}
+
+/* 표 */
+.sheet{background:var(--card);border-radius:14px;overflow:clip;border:1px solid var(--line)}
+.tbar{display:flex;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:52px;z-index:6;background:#fff}
+.tbar #q{flex:1 1 200px;max-width:300px;min-width:170px}
+.cnt{flex:0 1 auto;min-width:0;font-size:13.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnt b{color:var(--ink);font-size:15px}
+.cnt .where{color:var(--ink);font-weight:700}
+.tbar .sp{flex:1 0 0}
+.note{padding:9px 14px;background:#fffbe6;color:#6b4e00;font-size:13px;font-weight:600;border-bottom:1px solid var(--line)}
+.tbar .sortw,.tbar .qchips{display:none}
+.tbar .acts{display:flex;gap:8px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13.5px}
+th{position:sticky;top:calc(52px + var(--tbar-h, 65px));background:#f8f9fb;z-index:5;text-align:left;font-size:12.5px;color:var(--ink-2);font-weight:700;border-bottom:1px solid var(--line-2);white-space:nowrap;padding:0}
+th button{all:unset;cursor:pointer;display:flex;align-items:center;gap:4px;min-height:var(--tap);padding:0 8px;width:100%;box-sizing:border-box}
+th button:hover{background:#eff1f4}
+th button:focus-visible{outline:2px solid #f0a500;outline-offset:-2px}
+th .ar{color:#b8bdc5;font-size:10px}
+th[aria-sort="ascending"] .ar,th[aria-sort="descending"] .ar{color:var(--ink)}
+th.r button{justify-content:flex-end}
+td{padding:5px 8px;height:50px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:nth-child(even) td{background:#fcfcfd}
+tbody tr:hover td{background:#fffbe6}
+td.nk{font-weight:700;white-space:nowrap}
+/* 방 열은 다른 열이 한 줄로 다 들어간 뒤 남는 폭을 모두 쓴다(고정 폭 말줄임 대신) */
+td.rm{color:var(--ink-2);width:100%;max-width:0}
+td.rm span.t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}
+td.sm{min-width:170px}
+td.cn{white-space:nowrap;font-weight:600}
+td.r{text-align:right;white-space:nowrap}
+th.cpc{width:56px;text-align:center;font-weight:600;color:var(--muted)}
+td.cpc{padding:3px 6px;text-align:center;width:56px}
+.on{color:var(--green);font-weight:700}
+.cp{flex:none;min-height:var(--tap);min-width:var(--tap);border:1px solid var(--line-2);background:#fff;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--ink-2);padding:0 10px}
+.cp:hover{background:#f6f7f9;color:var(--ink)}
+td .cp{background:transparent;border-color:transparent;color:var(--muted)}
+tbody tr:hover td .cp,td .cp:focus-visible{background:#fff;border-color:var(--line-2);color:var(--ink)}
+.cp.done,td .cp.done{background:#e6f5ec;border-color:#bfe3cd;color:var(--green)}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:5px;padding:1px 7px;white-space:nowrap}
+.tag.ty{color:#fff;background:var(--red)} .tag.pl{color:#8a4b00;background:var(--amber-bg)} .tag.df{color:var(--gray);background:var(--gray-bg)}
+.sim{display:flex;flex-wrap:wrap;gap:4px}
+.sim span{background:#fff6cc;color:#6b4e00;border-radius:5px;padding:1px 6px;font-size:12.5px;font-weight:700}
+.none{color:#b8bdc5}
+.pager{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px;flex-wrap:wrap}
+.pager button{min-width:var(--tap);height:var(--tap);border:1px solid var(--line-2);background:#fff;border-radius:10px;font-weight:700;font-size:13.5px}
+.pager button[aria-current="true"]{background:var(--brown);color:#fff;border-color:var(--brown)}
+.pager button:disabled{opacity:.4;cursor:default}
+.empty{padding:48px 16px;text-align:center;color:var(--muted)}
+.empty .btn{margin-top:12px}
+.cards{display:none}
+.banner{background:var(--amber-bg);color:#8a4b00;border-radius:12px;padding:12px 16px;margin-bottom:12px;font-weight:600}
+
+@media (max-width:1100px){ .layout{grid-template-columns:260px minmax(0,1fr)}.top{flex-direction:column;align-items:stretch} .mkpis{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+/* 폰 */
+@media (max-width:900px){
+  .bar-in{padding-right:12px}
+  .layout,body.locked .layout{display:block}
+  .main{padding:12px 12px 40px}
+  .top{flex-direction:column;align-items:stretch;gap:8px;margin-bottom:12px}
+  .mkpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .mk{padding:7px 9px;min-height:62px}
+  .mk .l{font-size:12px;gap:5px}
+  .mk b{font-size:20px;line-height:1.2}
+  .mk small{font-size:11px}
+  .sum{font-size:12.5px;padding:0 2px}
+  .sum .st{font-size:12px}
+  .rail{position:fixed;inset:0 0 0 auto;width:min(350px,90vw);height:100%;z-index:50;box-shadow:-8px 0 30px #0003;transform:translateX(105%);transition:transform .2s;padding-top:calc(8px + env(safe-area-inset-top));border-right:0}
+  body.filters .rail{transform:none}
+  body.filters{overflow:hidden}
+  body.filters::after{content:'';position:fixed;inset:0;background:#0006;z-index:40}
+  .rail-head{display:flex;justify-content:space-between;align-items:center;margin:0 0 4px 4px;position:sticky;top:-8px;background:#fff;z-index:2;padding:4px 0}
+  .rail-head b{font-size:17px}
+  .toprooms{display:block;margin-bottom:12px}
+  .rh{margin-top:16px}
+  .filt-btn{display:inline-flex!important}
+  .head{margin-bottom:10px;flex-wrap:nowrap}
+  .head h2{font-size:18px}
+  .head #reset{display:none!important}
+  .tbar{display:grid;grid-template-columns:minmax(0,1fr) 164px;gap:8px;padding:10px 12px;position:static}
+  .tbar #q{max-width:none}
+  .tbar .cnt,.tbar .sp{display:none}
+  .tbar .sortw{display:block}
+  .tbar .sortw select{width:100%;font-weight:600;font-size:13.5px}
+  .tbar .qchips{display:grid;grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .qc{min-height:48px;border:1px solid var(--line-2);background:#fff;border-radius:12px;padding:3px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.25;white-space:nowrap}
+  .qc span{font-size:12px;font-weight:600;color:var(--ink-2)}
+  .qc b{font-size:14px;font-weight:800}
+  .qc[aria-pressed="true"]{background:var(--brown);border-color:var(--brown);color:#fff}
+  .qc[aria-pressed="true"] span{color:#ffffffd0}
+  .qc:disabled{opacity:.45;cursor:default}
+  .tbar .acts{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}
+  .tbar .acts .btn{padding:0 8px}
+  table{display:none}
+  .cards{display:block}
+  .card{padding:10px 12px 11px;border-bottom:1px solid var(--line)}
+  .card .kv{margin-top:6px}
+  .card .m{margin-top:6px!important}
+  .top{margin-bottom:10px!important;gap:6px!important}
+  .tr-h{margin-bottom:5px}
+  .toprooms{margin-bottom:10px!important}
+  .tbar{gap:6px!important}
+  .card .t{display:flex;gap:8px;align-items:center}
+  .card .who{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+  .card .who b{font-size:16px;overflow-wrap:anywhere;min-width:0}
+  .card .rm{font-size:12.5px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
+  .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;margin:8px 0 0;font-size:13.5px;align-items:center}
+  .kv dt{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+  .kv dd.v{font-weight:700}
+  .card .m{font-size:12.5px;color:var(--muted);margin-top:8px}
+  .pager button{min-width:var(--tap)}
+}
+</style>
+</head>
+<body class="locked">
+<header class="bar">
+  <div class="bar-in">
+    <a class="back" href="./" aria-label="오픈채팅 현황으로"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></a>
+    <h1>카페 미가입 확인</h1>
+  </div>
+</header>
+<div class="layout">
+  <aside class="rail" id="rail" aria-label="방·조건 고르기" hidden>
+    <div class="rail-head"><b>방·조건 고르기</b><button type="button" class="btn" id="rail-done">닫기</button></div>
+    <h3>더 좁히기</h3>
+    <label class="opt" id="o-active"><input type="checkbox" id="active"> 8일 안에 대화함<span class="c num" id="n-active"></span></label>
+    <label class="opt" id="o-joined"><input type="checkbox" id="joined"> 8일 안에 새로 입장<span class="c num" id="n-joined"></span></label>
+    <label class="opt" id="o-sim"><input type="checkbox" id="sim"> 비슷한 닉네임 있음<span class="c num" id="n-sim"></span></label>
+    <div class="rh"><h3>방 <span id="rp-h"></span></h3><div class="rank" role="group" aria-label="방 순서"><button type="button" data-rank="n" aria-pressed="true">많은 순</button><button type="button" data-rank="rate" aria-pressed="false">비율순</button></div></div>
+    <div class="seg" id="room-kind" role="group" aria-label="방 묶음">
+      <button type="button" data-k="all" aria-pressed="true">전체</button><button type="button" data-k="community" aria-pressed="false">커뮤니티</button><button type="button" data-k="waiting" aria-pressed="false">강사대기</button><button type="button" data-k="group" aria-pressed="false">강의방</button>
+    </div>
+    <input class="input" id="room-q" type="search" placeholder="방 이름 찾기" aria-label="방 이름 찾기" style="margin-top:8px">
+    <div class="roompick" id="roompick"></div>
+  </aside>
+  <main class="main">
+    <div class="banner" id="banner" hidden></div>
+    <div class="top" id="top" hidden>
+      <div class="mkpis num" id="mkpis"></div>
+      <div class="sum num"><span id="sum"></span><span class="st"><span id="per"></span><span id="stamps"></span></span><span class="act" id="actl" hidden></span></div>
+    </div>
+    <section class="lock" id="lock" hidden>
+      <h2>사람 명단은 잠겨 있어요</h2>
+      <p>비밀번호를 넣으면 닉네임이 보여요</p>
+      <form id="lock-form">
+        <input type="password" id="pw" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호" aria-label="비밀번호">
+        <div class="err" id="pw-err" role="alert"></div>
+        <label><input type="checkbox" id="remember" checked> 이 기기에서 30일 기억</label>
+        <button type="submit" class="btn primary" id="open">명단 열기</button>
+      </form>
+    </section>
+    <section id="work" hidden>
+      <div class="toprooms" id="toprooms">
+        <div class="tr-hd"><div class="tr-h" id="tr-h"></div><div class="rank" role="group" aria-label="방 순서"><button type="button" data-rank="n" aria-pressed="true">많은 순</button><button type="button" data-rank="rate" aria-pressed="false">비율순</button></div><button type="button" class="tr-all num" id="tr-all" data-room=""></button></div>
+        <div class="tr-row" id="tr-row"></div>
+      </div>
+      <div class="head">
+        <div class="tt"><h2 id="title"></h2><div class="meta num" id="meta"></div></div>
+        <div class="acts">
+          <button type="button" class="btn" id="reset" hidden>전체 방 보기</button>
+          <button type="button" class="btn dark filt-btn" id="filt">방·조건 고르기 <span class="bd num" id="filt-n" hidden></span></button>
+        </div>
+      </div>
+      <div class="sheet">
+        <div class="tbar">
+          <input class="input" id="q" type="search" placeholder="닉네임·카페 닉네임 찾기" aria-label="닉네임·카페 닉네임 찾기">
+          <span class="cnt num" id="cnt"></span>
+          <span class="sp"></span>
+          <label class="sortw"><select class="input" id="sort" aria-label="정렬">
+            <option value="kind">구분순</option><option value="talk">대화 많은 순</option><option value="last">최근 대화순</option><option value="join">최근 입장순</option><option value="sim">비슷한 닉네임순</option><option value="name">닉네임 가나다순</option><option value="room">방 이름순</option><option value="cafe">적은 카페 닉네임순</option>
+          </select></label>
+          <div class="qchips" id="qchips"></div>
+          <div class="acts">
+            <button type="button" class="btn" id="copy">닉네임 복사</button>
+            <button type="button" class="btn" id="csv">엑셀 받기</button>
+          </div>
+        </div>
+        <div class="note" id="note" hidden></div>
+        <table>
+          <thead><tr id="thead"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        <div class="cards" id="cards"></div>
+        <div class="pager" id="pager"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+(() => {
+'use strict';
+/* 카페 미가입 화면 시안 공통 — 불러오기·잠금 풀기·거르기·내보내기. 시안마다 그리기만 다르다. */
+const DATA_DIR = 'data';
+const PW_KEY = 'openchat-board/cafe-pw';
+const PW_DAYS = 30;
+const KIND_CLASS = { '공지방': 'notice', '사담방': 'talk', '프리미엄방': 'premium' };
+const KINDS = { ty: '카페에 없음', pl: '형식 불일치', df: '기본 닉네임' };
+const R2K = { typed: 'ty', plain: 'pl', default: 'df' };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => (n == null ? '–' : Number(n).toLocaleString('ko-KR'));
+const store = {
+  get(key, empty) { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : empty; } catch (e) { return empty; } },
+  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (e) { return false; } },
+};
+function kst(iso) { const k = new Date(new Date(iso).getTime() + 9 * 3600000); return { y: k.getUTCFullYear(), mo: k.getUTCMonth() + 1, d: k.getUTCDate(), h: k.getUTCHours(), mi: k.getUTCMinutes() }; }
+const hhmm = p => String(p.h).padStart(2, '0') + ':' + String(p.mi).padStart(2, '0');
+function daysAgo(iso) { const p = kst(iso), n = kst(new Date().toISOString()); return Math.round((Date.UTC(n.y, n.mo - 1, n.d) - Date.UTC(p.y, p.mo - 1, p.d)) / 86400000); }
+function when(iso) { if (!iso) return ''; const p = kst(iso), d = daysAgo(iso); return d === 0 ? '오늘 ' + hhmm(p) : d === 1 ? '어제 ' + hhmm(p) : p.mo + '/' + p.d; }
+const stampText = iso => { const p = kst(iso); return p.mo + '/' + p.d + ' ' + hhmm(p); };
+
+let data = null, icons = {}, lists = null;
+const shortName = r => r.c || r.n;
+const roomGroup = r => r.w ? 'waiting' : r.g ? 'group' : 'community';
+const byKey = k => data.rooms.find(r => r.k === k);
+const cfOk = r => r && r.cf && r.cf.st === 'ok';
+/* 두 기준 시각 — 톡방 숫자(10분마다) · 카페 명단(하루 한 번) */
+const stamps = () => `톡방 ${stampText(data.generatedAt)} · 카페 명단 ${stampText(data.cafe.rosterAt)}`;
+const late = () => (Date.now() - new Date(data.cafe.rosterAt).getTime()) / 3600000 > data.cafe.staleHours;
+
+async function getJson(path) {
+  const res = await fetch(DATA_DIR + '/' + path + (path.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+  if (!res.ok) throw new Error(path + ' 응답 ' + res.status);
+  return res.json();
+}
+const b64 = s => Uint8Array.from(atob(s), ch => ch.charCodeAt(0));
+async function unlock(pw) {
+  if (typeof DecompressionStream === 'undefined') return '이 브라우저에서는 명단을 열 수 없어요. 최신 크롬·사파리·엣지에서 열어 주세요.';
+  let box;
+  try { box = await getJson('cafe-locked.json'); } catch (e) { console.error('명단 파일 받기 실패', e); return '명단을 받지 못했어요. 잠시 뒤 새로 고쳐 주세요.'; }
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: b64(box.salt), iterations: box.iter },
+    base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  let packed;
+  try { packed = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, key, b64(box.ct)); }
+  catch (e) { return 'wrong'; }
+  if (box.zip !== 'deflate-raw') { console.error('명단 봉투 형식이 다름', box.zip); return '명단 형식이 바뀌었어요. 화면을 새로 고쳐 주세요.'; }
+  lists = JSON.parse(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text());
+  return 'ok';
+}
+/* 불러오기 → 저장된 비밀번호면 바로 풀기. ui = { numbers(), locked(msg), opened(), failed(msg), noRoster() } */
+async function boot(ui) {
+  try { data = await getJson('overview.json'); } catch (e) { console.error('숫자 받기 실패', e); return ui.failed('숫자를 불러오지 못했어요. 잠시 뒤 새로 고쳐 주세요.'); }
+  try { icons = (await getJson('icons.json?d=' + data.today)).rooms || {}; } catch (e) { icons = {}; }
+  if (!data.cafe || data.cafe.st !== 'ok') return ui.noRoster();
+  ui.numbers();
+  const saved = store.get(PW_KEY, null);
+  if (saved && saved.until > Date.now() && saved.pw) {
+    ui.opening();
+    const out = await unlock(saved.pw);
+    if (out === 'ok') return ui.opened();
+    store.set(PW_KEY, null);
+    return ui.locked(out === 'wrong' ? '비밀번호가 바뀌었어요. 다시 넣어 주세요.' : out);
+  }
+  ui.locked('');
+}
+async function submitPw(pw, remember) {
+  if (!pw) return '비밀번호를 넣어 주세요.';
+  const out = await unlock(pw);
+  if (out !== 'ok') return out === 'wrong' ? '비밀번호가 달라요.' : out;
+  if (remember && !store.set(PW_KEY, { pw, until: Date.now() + PW_DAYS * 86400000 })) return 'ok-nomem';
+  return 'ok';
+}
+
+/* 사람 목록 — f: ty|pl|df|all · room: 키 또는 '' · active: 8일 안에 말함 · joined: 8일 안에 입장 */
+function people({ room = '', f = 'ty', q = '', active = false, joined = false, sim = false, sort = 'kind' } = {}) {
+  let rows = [];
+  for (const k of room ? [room] : Object.keys(lists.rooms)) for (const p of (lists.rooms[k] || [])) rows.push(Object.assign({ k }, p));
+  if (f !== 'all') rows = rows.filter(p => R2K[p.r] === f);
+  if (active) rows = rows.filter(p => p.c);
+  if (joined) rows = rows.filter(p => p.j);
+  if (sim) rows = rows.filter(p => p.s && p.s.length);
+  const key = q.toLowerCase().replace(/\s+/g, '');
+  if (key) rows = rows.filter(p => (p.n + ' ' + (p.p || '') + ' ' + (p.s || []).join(' ')).toLowerCase().replace(/\s+/g, '').includes(key));
+  const order = { typed: 0, plain: 1, default: 2 };
+  const by = {
+    kind: (a, b) => order[a.r] - order[b.r] || (b.c || 0) - (a.c || 0) || a.n.localeCompare(b.n, 'ko'),
+    spoke: (a, b) => (b.l || '').localeCompare(a.l || '') || a.n.localeCompare(b.n, 'ko'),
+    talk: (a, b) => (b.c || 0) - (a.c || 0) || a.n.localeCompare(b.n, 'ko'),
+    join: (a, b) => (b.j || '').localeCompare(a.j || '') || a.n.localeCompare(b.n, 'ko'),
+    name: (a, b) => a.n.localeCompare(b.n, 'ko'),
+    room: (a, b) => shortName(byKey(a.k)).localeCompare(shortName(byKey(b.k)), 'ko') || order[a.r] - order[b.r] || a.n.localeCompare(b.n, 'ko'),
+  }[sort];
+  return rows.sort(by);
+}
+function why(p) {
+  if (p.r === 'typed') return `적은 카페 닉네임 <b>${esc(p.p)}</b> · 카페에 없음`;
+  if (p.r === 'plain') return '«김@진(카페닉)» 형식이 아님';
+  return '카카오가 붙인 이름 · 누군지 모름';
+}
+function copyNicks(rows, button, label) {
+  const done = ok => { button.textContent = ok ? `${fmt(rows.length)}명 복사했어요` : '복사가 막혔어요'; setTimeout(() => { button.textContent = label; }, 1800); };
+  navigator.clipboard.writeText(rows.map(p => p.n).join('\n')).then(() => done(true), () => done(false));
+}
+function downloadCsv(rows, name) {
+  const cell = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const lines = [['방', '오픈채팅 닉네임', '구분', '적은 카페 닉네임', '카페의 비슷한 닉네임', '마지막 대화', '8일 대화 수', '입장'].map(cell).join(',')];
+  for (const p of rows) {
+    const room = byKey(p.k);
+    lines.push([room ? room.n : '', p.n, KINDS[R2K[p.r]], p.p || '', (p.s || []).join(' / '), p.l ? stampText(p.l) : '', p.c || 0, p.j ? stampText(p.j) : ''].map(cell).join(','));
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = name.replace(/[\\/:*?"<>|\s]+/g, '_') + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function readHash() { return Object.fromEntries(new URLSearchParams(location.hash.slice(1))); }
+function writeHash(obj) {
+  const h = new URLSearchParams();
+  for (const [k, v] of Object.entries(obj)) if (v) h.set(k, v);
+  history.replaceState(null, '', h.toString() ? '#' + h.toString() : location.pathname);
+}
+
+const phone = matchMedia('(max-width:900px)');
+const pageSize = () => phone.matches ? 30 : 100;
+const COLORS = { ty: 'var(--red)', pl: 'var(--amber)', df: '#b5bac2' };
+const ORDER = { typed: 0, plain: 1, default: 2 };
+const SUB = { ty: '오타 또는 미가입', pl: '미가입 확정 아님', df: '누군지 모름' };
+const MEAN = { ty: '적은 카페 닉네임이 카페 회원 중에 없어요', pl: '«김@진(카페닉)» 꼴이 아니라 확인을 못 했어요', df: '카카오가 붙인 이름이라 누군지 몰라요' };
+const h = readHash();
+const st = { kinds: new Set((h.f && h.f !== 'all' ? h.f.split(',') : ['ty']).filter(f => KINDS[f])), room: h.room || '', q: '', active: false, joined: false, sim: false, kind: 'all', roomQ: '', sort: 'kind', dir: 1, page: 0, rank: 'n' };
+if (!st.kinds.size) st.kinds.add('ty');
+
+/* 방 표시 — 공지방·사담방 등 배지 + 짧은 이름. 배지가 없으면 이름 앞 괄호말이나 이름 끝 «, 사담방»을 배지로 */
+const TAIL = /,\s*(공지방|사담방|프리미엄방)$/;
+const roomKind = r => r.kind || ((r.n.match(/^\(([^)]+)\)/) || [])[1]) || ((r.n.match(TAIL) || [])[1]) || '';
+const roomBase = r => shortName(r).replace(TAIL, '').trim() || shortName(r);
+function roomTag(r) { const k = roomKind(r); return k ? `<span class="chip ${KIND_CLASS[k] || 'etc'}">${esc(k)}</span>` : ''; }
+const roomLabel = r => r ? roomTag(r) + esc(roomBase(r)) : '';
+const curRoom = () => (st.room ? byKey(st.room) : null);
+/* 지금 보는 범위(모든 방 / 고른 방)의 구분별 숫자 — overview 숫자라 잠금 전에도 그린다 */
+function scope() { const r = curRoom(); return !r ? data.cafe : cfOk(r) ? r.cf : null; }
+const roomN = r => (cfOk(r) ? [...st.kinds].reduce((s, f) => s + (r.cf[f] || 0), 0) : -1);
+const roomRate = r => (cfOk(r) ? roomN(r) / Math.max(1, r.cf.checked) : -1);
+/* 방 순서 — 많은 순(사람 수) / 비율순(닉네임 읽은 사람 중 몇 %) */
+const rankCmp = (a, b) => (st.rank === 'rate' ? roomRate(b) - roomRate(a) || roomN(b) - roomN(a) : roomN(b) - roomN(a) || roomRate(b) - roomRate(a));
+/* 빨간 강조는 PC·폰 모두 같은 규칙 — «카페에 없음»만 볼 때 비율 2% 이상 */
+const hot = r => roomRate(r) >= 0.02 && st.kinds.has('ty') && st.kinds.size === 1;
+const unit = '<span class="u">명</span>';
+function pctText(a, b) { if (!b) return '–'; const v = a / b * 100; return (v >= 10 || v === 0 ? Math.round(v) : v.toFixed(1)) + '%'; }
+const kindsLabel = () => [...st.kinds].map(f => KINDS[f]).join('+');
+
+function renderTop() {
+  const c = scope(), r = curRoom();
+  $('top').hidden = false;
+  const on = !!lists;
+  $('mkpis').innerHTML = ['ty', 'pl', 'df'].map(f => `<button type="button" class="mk" data-f="${f}" style="--c:${COLORS[f]}" ${on ? `aria-pressed="${st.kinds.has(f)}"` : 'tabindex="-1"'} title="${MEAN[f]}"><span class="l"><i class="ck"></i>${KINDS[f]}</span><b>${c ? fmt(c[f]) + unit : '–'}</b><small>${SUB[f]}</small></button>`).join('');
+  if (!c) $('sum').innerHTML = '이 방은 닉네임을 읽지 못했어요';
+  else {
+    const ok = c.checked - c.ty - c.pl - c.df;
+    $('sum').innerHTML = `${r ? '이 방 ' : ''}닉네임 읽은 <b>${fmt(c.checked)}명</b> 중 <b>${fmt(ok)}명(${Math.round(ok / Math.max(1, c.checked) * 100)}%)</b> 카페 가입 확인`;
+  }
+  $('per').textContent = r ? '' : '방마다 센 합계 · ';
+  // 잠금 중에도 «8일 안에 대화한 사람»을 구분별로 — 방마다 받은 숫자(act)가 모두 있을 때만 쓴다
+  const rs = r ? [r] : data.rooms.filter(cfOk), hasAct = !on && c && rs.length > 0 && rs.every(x => x.cf.act);
+  $('actl').hidden = !hasAct;
+  if (hasAct) $('actl').innerHTML = '8일 안에 대화한 사람 · ' + ['ty', 'pl', 'df'].map(f => `<span class="nw">${KINDS[f]} <b>${fmt(rs.reduce((sum, x) => sum + (x.cf.act[f] || 0), 0))}명</b></span>`).join(' · ');
+  $('stamps').textContent = stamps() + (late() ? ' · 명단 오래됨' : '');
+  $('stamps').classList.toggle('late', late());
+}
+
+/* 사람 줄 — 고른 구분이 여럿이면 합친다. extra 로 한 조건만 바꿔 셀 수 있다 */
+function collect(extra) {
+  let out = [];
+  for (const f of st.kinds) out = out.concat(people(Object.assign({ room: st.room, f, q: st.q, active: st.active, joined: st.joined, sim: st.sim, sort: 'name' }, extra)));
+  return out;
+}
+/* 대화 수가 같으면 오타 후보(비슷한 닉네임 많은 사람)가 먼저 */
+const simN = p => (p.s && p.s.length) || 0;
+const CMP = {
+  kind: (a, b) => ORDER[a.r] - ORDER[b.r] || (b.c || 0) - (a.c || 0) || simN(b) - simN(a),
+  name: (a, b) => a.n.localeCompare(b.n, 'ko'),
+  room: (a, b) => roomBase(byKey(a.k)).localeCompare(roomBase(byKey(b.k)), 'ko'),
+  cafe: (a, b) => (a.p || '').localeCompare(b.p || '', 'ko'),
+  sim: (a, b) => simN(b) - simN(a) || (b.c || 0) - (a.c || 0),
+  last: (a, b) => (b.l || '').localeCompare(a.l || ''),
+  talk: (a, b) => (b.c || 0) - (a.c || 0) || simN(b) - simN(a),
+  join: (a, b) => (b.j || '').localeCompare(a.j || ''),
+};
+/* 글자 열은 ▲(가나다순)이 기본, 숫자·날짜 열은 ▼(많은·최근 순)이 기본. 값 없는 줄은 어느 쪽이든 맨 뒤 */
+const TEXT = { name: 1, room: 1, cafe: 1 };
+const EMPTY = { last: p => !p.l, join: p => !p.j, cafe: p => !p.p, sim: p => !(p.s && p.s.length) };
+/* 기본 정렬 — 구분 하나면 대화 많은 순. 그 범위에 8일 안에 대화한 사람이 없으면 오타 후보(비슷한 닉네임)부터.
+   방 이름순은 방 하나를 골랐을 때, 적은 카페 닉네임순은 «카페에 없음»이 빠졌을 때 뜻이 없어 기본으로 돌린다 */
+let autoKey = 'talk';
+function eff() {
+  let s = st.sort;
+  if ((s === 'room' && st.room) || (s === 'cafe' && !st.kinds.has('ty'))) s = 'kind';
+  return s === 'kind' && st.kinds.size === 1 ? autoKey : s;
+}
+function rows0() {
+  const k = eff(), e = EMPTY[k];
+  return collect({}).sort((a, b) => {
+    if (e) { const x = e(a), y = e(b); if (x !== y) return x ? 1 : -1; }
+    return st.dir * CMP[k](a, b) || a.n.localeCompare(b.n, 'ko');
+  });
+}
+
+function renderRail() {
+  $('active').checked = st.active; $('joined').checked = st.joined; $('sim').checked = st.sim;
+  const q = st.roomQ.toLowerCase().replace(/\s+/g, '');
+  const rooms = data.rooms.filter(r => (st.kind === 'all' || roomGroup(r) === st.kind) && (!q || (r.n + (r.c || '')).toLowerCase().replace(/\s+/g, '').includes(q)))
+    .sort(rankCmp);
+  const all = data.rooms.reduce((s, r) => s + Math.max(0, roomN(r)), 0);
+  const byRate = st.rank === 'rate';
+  document.querySelectorAll('[data-rank]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rank === st.rank)));
+  $('rp-h').textContent = '· ' + kindsLabel();
+  // 고른 순서의 숫자를 크게(많은 순 = 사람 수 · 비율순 = %), 다른 하나를 작게
+  const pair = (n, rate, isHot) => byRate
+    ? `<b class="${isHot ? 'hot' : ''}">${rate}</b><small>${fmt(n)}명</small>`
+    : `<b>${fmt(n)}${unit}</b><small class="${isHot ? 'hot' : ''}">${rate}</small>`;
+  $('roompick').innerHTML = `<button type="button" class="rp" data-room="" aria-current="${!st.room}"><span class="nm">모든 방 <span class="none num">${data.rooms.length}개</span></span><span class="ct num">${pair(all, pctText(all, data.cafe.checked), false)}</span></button>` +
+    rooms.map(r => `<button type="button" class="rp" data-room="${esc(r.k)}" aria-current="${st.room === r.k}" title="${esc(r.n)}"><span class="nm">${roomLabel(r)}</span>` +
+      `<span class="ct num">${cfOk(r) ? pair(roomN(r), pctText(roomN(r), r.cf.checked), hot(r)) : '<small>못 읽음</small>'}</span></button>`).join('');
+  if (!rooms.length) $('roompick').innerHTML += '<div class="empty" style="padding:20px">맞는 방이 없어요</div>';
+  // 폰 — 위 3개 방을 한 줄에 다 보이게(고른 방이 3위 밖이면 맨 앞에). «모든 방»은 머리 줄 오른쪽에 늘 보인다
+  const ranked = data.rooms.filter(cfOk).sort(rankCmp);
+  let top = ranked.slice(0, 3);
+  const cur = curRoom();
+  if (cur && !top.includes(cur)) top = [cur].concat(top.slice(0, 2));
+  $('tr-h').textContent = '방별 ' + kindsLabel();
+  $('tr-all').innerHTML = `모든 방 <b>${fmt(all)}</b>명`;
+  $('tr-all').setAttribute('aria-current', String(!st.room));
+  $('tr-row').innerHTML = top.map(r => {
+    const n = roomN(r), rate = pctText(n, r.cf.checked), rt = `<span class="${hot(r) ? 'hot' : ''}">${rate}</span>`;
+    // 위 줄 = 방 이름(두 줄까지 · 끝 [강사] 꼬리는 뗀다) · 아래 줄 = 방 구분 배지 + 사람 수 + 비율
+    return `<button type="button" class="tr" data-room="${esc(r.k)}" aria-current="${st.room === r.k}" title="${esc(r.n)}"><span class="nm">${esc(roomBase(r).replace(/\s*\[[^\]]*\]\s*$/, '') || roomBase(r))}</span>` +
+      `<span class="sub num">${roomTag(r)}${byRate ? `${rt}<span class="rt">${fmt(n)}명</span>` : `<b>${fmt(n)}</b>명<span class="rt">${rt}</span>`}</span></button>`;
+  }).join('');
+  const nOn = (st.room ? 1 : 0) + (st.active ? 1 : 0) + (st.joined ? 1 : 0) + (st.sim ? 1 : 0);
+  $('filt-n').textContent = nOn; $('filt-n').hidden = !nOn;
+}
+
+let rows = [];
+const COLS = [['name', '오픈채팅 닉네임'], ['room', '방'], ['kind', '구분'], ['cafe', '적은 카페 닉네임'], ['sim', '비슷한 닉네임'], ['last', '마지막 대화', 'r'], ['talk', '8일 대화', 'r'], ['join', '입장', 'r']];
+const simHtml = p => (p.s && p.s.length ? `<div class="sim">${p.s.map(s => `<span>${esc(s)}</span>`).join('')}</div>` : '<span class="none">없음</span>');
+const lastHtml = p => (p.l ? `<span class="${daysAgo(p.l) <= 1 ? 'on' : ''}">${when(p.l)}</span>` : '');
+const copyBtn = (i, n) => `<button type="button" class="cp" data-copy="${i}" aria-label="${esc(n)} 닉네임 복사">복사</button>`;
+function renderTable() {
+  writeHash({ room: st.room, f: [...st.kinds].join(',') === 'ty' ? '' : [...st.kinds].join(',') });
+  const r = curRoom(), size = pageSize();
+  // 좁히기 인원수 — 그 조건을 켰을 때 몇 명인지. 0명이고 꺼져 있으면 누를 수 없게
+  const nA = collect({ active: true }).length, nJ = collect({ joined: true }).length, nS = collect({ sim: true }).length;
+  autoKey = nA === 0 && nS > 0 ? 'sim' : 'talk';
+  rows = rows0();
+  $('title').textContent = r ? r.n : '모든 방';
+  $('meta').textContent = r ? `인원 ${fmt(r.m)}명${cfOk(r) ? ' · 닉네임 읽은 ' + fmt(r.cf.checked) + '명' : ''}` : `방 ${data.rooms.length}개 · 여러 방에 있으면 방마다 한 줄`;
+  $('reset').hidden = !st.room;
+  // 표를 내려도 어느 방 명단인지 보이게 — 도구줄에 지금 범위를 같이 쓴다
+  $('cnt').innerHTML = `<span class="where">${r ? roomLabel(r) : '모든 방'}</span> · <b>${fmt(rows.length)}명</b> · ${kindsLabel()}`;
+  $('cnt').title = r ? r.n : '모든 방';
+  $('copy').textContent = `닉네임 복사 ${fmt(rows.length)}명`;
+  $('csv').textContent = `엑셀 받기 ${fmt(rows.length)}명`;
+  $('copy').disabled = $('csv').disabled = !rows.length;
+  for (const [k, n] of [['active', nA], ['joined', nJ], ['sim', nS]]) {
+    const off = !st[k] && n === 0;
+    $('n-' + k).textContent = fmt(n) + '명'; $(k).disabled = off; $('o-' + k).classList.toggle('off', off);
+  }
+  $('qchips').innerHTML = [['active', '8일 대화함', nA], ['joined', '8일 새 입장', nJ], ['sim', '비슷한 닉네임', nS]]
+    .map(([k, l, n]) => `<button type="button" class="qc" data-q="${k}" aria-pressed="${st[k]}" ${!st[k] && n === 0 ? 'disabled' : ''}><span>${l}</span><b class="num">${fmt(n)}명</b></button>`).join('');
+  // 정렬 선택창은 실제로 적용된 정렬과 방향을 보여 준다. 뜻 없는 항목은 숨긴다
+  const one = st.kinds.size === 1, k0 = eff();
+  const hideOpt = { kind: one, room: !!st.room, cafe: !st.kinds.has('ty') };
+  for (const o of $('sort').options) {
+    o.dataset.l = o.dataset.l || o.textContent;
+    o.hidden = !!hideOpt[o.value];
+    o.textContent = o.dataset.l + (o.value === k0 && st.dir === -1 ? ' (역순)' : '');
+  }
+  $('sort').value = k0;
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  st.page = Math.min(st.page, pages - 1);
+  const from = st.page * size, shown = rows.slice(from, from + size);
+  // 8일 안에 대화·입장한 사람이 하나도 없으면 «–»만 찬 열을 빼고 한 줄로 알린다
+  const noTalk = rows.length > 0 && rows.every(p => !p.c && !p.l), noJoin = rows.length > 0 && rows.every(p => !p.j);
+  const autoSim = st.sort === 'kind' && k0 === 'sim';
+  $('note').hidden = !noTalk;
+  $('note').textContent = noTalk ? `8일 동안 ${noJoin ? '대화·입장' : '대화'} 0명${autoSim ? ' · 비슷한 닉네임 있는 사람부터 보여요' : ''}` : '';
+  // 다 같은 값인 열은 뺀다 — 방 하나를 골랐으면 «방», 구분 하나만 보면 «구분», «카페에 없음»이 빠지면 «적은 카페 닉네임»
+  const show = { room: !st.room, kind: !one, cafe: st.kinds.has('ty'), last: !noTalk, talk: !noTalk, join: !noJoin };
+  const arrow = k => { const asc = TEXT[k] ? st.dir === 1 : st.dir === -1; return [asc ? 'ascending' : 'descending', asc ? '▲' : '▼']; };
+  $('thead').innerHTML = COLS.filter(([k]) => show[k] !== false).map(([k, label, cls]) => {
+    const [aria, ar] = k0 === k ? arrow(k) : ['none', '↕'];
+    return `<th class="${cls || ''}" aria-sort="${aria}"><button type="button" data-sort="${k}">${label}<span class="ar">${ar}</span></button></th>`;
+  }).join('') + '<th class="cpc">복사</th>';
+  $('tbody').innerHTML = shown.map((p, i) => {
+    const room = byKey(p.k);
+    return `<tr><td class="nk">${esc(p.n)}</td>${st.room ? '' : `<td class="rm"><span class="t" title="${esc(room.n)}">${roomLabel(room)}</span></td>`}
+      ${show.kind ? `<td><span class="tag ${R2K[p.r]}">${KINDS[R2K[p.r]]}</span></td>` : ''}
+      ${show.cafe ? `<td class="cn">${p.p ? esc(p.p) : '<span class="none">–</span>'}</td>` : ''}
+      <td class="sm">${p.r === 'default' && !(p.s && p.s.length) ? '<span class="none">–</span>' : simHtml(p)}</td>
+      ${show.last ? `<td class="r num">${p.l ? lastHtml(p) : '<span class="none">–</span>'}</td>` : ''}
+      ${show.talk ? `<td class="r num">${p.c ? fmt(p.c) : '<span class="none">0</span>'}</td>` : ''}
+      ${show.join ? `<td class="r num">${p.j ? when(p.j) : '<span class="none">–</span>'}</td>` : ''}
+      <td class="cpc">${copyBtn(from + i, p.n)}</td></tr>`;
+  }).join('');
+  $('cards').innerHTML = shown.map((p, i) => {
+    const room = byKey(p.k);
+    const kv = p.r === 'typed'
+      ? `<dt>적은 카페 닉네임</dt><dd class="v">${esc(p.p)}</dd><dt>비슷한 닉네임</dt><dd>${simHtml(p)}</dd>`
+      : `<dt>이유</dt><dd>${why(p)}</dd>${p.s && p.s.length ? `<dt>비슷한 닉네임</dt><dd>${simHtml(p)}</dd>` : ''}`;
+    return `<article class="card"><div class="t"><div class="who"><b>${esc(p.n)}</b>${show.kind ? `<span class="tag ${R2K[p.r]}">${KINDS[R2K[p.r]]}</span>` : ''}</div>${copyBtn(from + i, p.n)}</div>
+      ${st.room ? '' : `<div class="rm">${roomLabel(room)}</div>`}
+      <dl class="kv">${kv}</dl>
+      ${noTalk && noJoin ? '' : `<div class="m num">${p.l ? lastHtml(p) + ' 대화 · 8일 ' + fmt(p.c) + '건' : '8일 동안 대화 없음'}${p.j ? ' · ' + when(p.j) + ' 입장' : ''}</div>`}</article>`;
+  }).join('');
+  if (!rows.length) {
+    const any = st.q || st.active || st.joined || st.sim;
+    $('cards').innerHTML = `<div class="empty">해당하는 사람이 없어요${any ? '<br><button type="button" class="btn" id="clear">조건 풀기</button>' : ''}</div>`;
+    $('cards').style.display = 'block';
+  } else $('cards').style.display = '';
+  const nums = [];
+  for (let i = 0; i < pages; i++) if (i < 1 || i >= pages - 1 || Math.abs(i - st.page) <= 1) nums.push(i); else if (nums[nums.length - 1] !== '…') nums.push('…');
+  $('pager').innerHTML = pages < 2 ? '' : `<button type="button" data-page="${st.page - 1}" ${st.page ? '' : 'disabled'} aria-label="앞 쪽">‹</button>` +
+    nums.map(i => i === '…' ? '<span class="none">…</span>' : `<button type="button" class="num" data-page="${i}" aria-current="${i === st.page}">${i + 1}</button>`).join('') +
+    `<button type="button" data-page="${st.page + 1}" ${st.page < pages - 1 ? '' : 'disabled'} aria-label="다음 쪽">›</button>`;
+}
+function rerender() { st.page = 0; renderTop(); if (lists) { renderRail(); renderTable(); } }
+function showWork() {
+  document.body.classList.remove('locked');
+  $('lock').hidden = true; $('work').hidden = false; $('rail').hidden = false;
+  if (st.room && !byKey(st.room)) st.room = '';
+  rerender();
+}
+const closeRail = () => document.body.classList.remove('filters');
+function setRoom(k) { st.room = k; rerender(); closeRail(); scrollTo(0, 0); }
+
+boot({
+  failed(msg) { $('banner').textContent = msg; $('banner').hidden = false; },
+  noRoster() { $('banner').textContent = '카페 회원 명단을 아직 받지 못했어요. 매일 아침 6시 30분에 받아요.'; $('banner').hidden = false; },
+  numbers() { if (st.room && !byKey(st.room)) st.room = ''; renderTop(); },
+  opening() { $('stamps').textContent = '명단 여는 중…'; },
+  locked(msg) { renderTop(); $('lock').hidden = false; $('pw-err').textContent = msg; },
+  opened() { showWork(); },
+});
+$('lock-form').onsubmit = async ev => {
+  ev.preventDefault();
+  $('open').disabled = true; $('open').textContent = '여는 중…';
+  const out = await submitPw($('pw').value.trim(), $('remember').checked);
+  $('open').disabled = false; $('open').textContent = '명단 열기';
+  if (!out.startsWith('ok')) { $('pw-err').textContent = out; return; }
+  if (out === 'ok-nomem') { $('banner').textContent = '이 브라우저는 비밀번호를 기억하지 못해요. 다음에 다시 넣어 주세요.'; $('banner').hidden = false; }
+  showWork();
+};
+function copyOne(btn) {
+  const p = rows[+btn.dataset.copy];
+  if (!p) return;
+  const done = ok => { btn.textContent = ok ? '복사됨' : '막힘'; btn.classList.toggle('done', ok); setTimeout(() => { btn.textContent = '복사'; btn.classList.remove('done'); }, 1500); };
+  navigator.clipboard.writeText(p.n).then(() => done(true), () => done(false));
+}
+document.addEventListener('click', ev => {
+  const t = ev.target;
+  const room = t.closest('#roompick [data-room], #tr-row [data-room], #tr-all');
+  if (room) { setRoom(room.dataset.room); return; }
+  const rb = t.closest('[data-rank]');
+  if (rb) { st.rank = rb.dataset.rank; renderRail(); return; }
+  if (t.closest('#reset')) { setRoom(''); return; }
+  const cp = t.closest('[data-copy]');
+  if (cp) { copyOne(cp); return; }
+  const sort = t.closest('th [data-sort]');
+  if (sort) { const k = sort.dataset.sort; st.dir = eff() === k ? -st.dir : 1; st.sort = k; renderTable(); return; }
+  const pg = t.closest('#pager [data-page]');
+  if (pg && !pg.disabled) { st.page = +pg.dataset.page; renderTable(); document.querySelector('.sheet').scrollIntoView({ block: 'start' }); return; }
+  const rk = t.closest('#room-kind [data-k]');
+  if (rk) { st.kind = rk.dataset.k; document.querySelectorAll('#room-kind [data-k]').forEach(b => b.setAttribute('aria-pressed', String(b === rk))); renderRail(); return; }
+  const mk = t.closest('#mkpis [data-f]');
+  // 구분 칸은 체크처럼 켜고 끈다(하나는 늘 켜져 있다). 잠금 중에는 누를 수 없다
+  if (mk) {
+    if (!lists) return;
+    const f = mk.dataset.f;
+    if (!st.kinds.has(f)) st.kinds.add(f); else if (st.kinds.size > 1) st.kinds.delete(f);
+    rerender(); return;
+  }
+  const qc = t.closest('#qchips [data-q]');
+  if (qc && !qc.disabled) { st[qc.dataset.q] = !st[qc.dataset.q]; rerender(); return; }
+  if (t.closest('#clear')) { st.q = ''; $('q').value = ''; st.active = st.joined = st.sim = false; rerender(); return; }
+  if (t.closest('#filt')) { document.body.classList.add('filters'); return; }
+  if (t.closest('#rail-done') || (document.body.classList.contains('filters') && !t.closest('#rail'))) closeRail();
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') closeRail(); });
+for (const k of ['active', 'joined', 'sim']) $(k).onchange = ev => { st[k] = ev.target.checked; rerender(); };
+$('sort').onchange = ev => { st.sort = ev.target.value; st.dir = 1; st.page = 0; renderTable(); };
+$('room-q').oninput = ev => { st.roomQ = ev.target.value.trim(); renderRail(); };
+$('q').oninput = ev => { st.q = ev.target.value.trim(); st.page = 0; renderRail(); renderTable(); };
+$('copy').onclick = ev => copyNicks(rows, ev.currentTarget, `닉네임 복사 ${fmt(rows.length)}명`);
+$('csv').onclick = () => downloadCsv(rows, '카페미가입_' + (st.room ? shortName(byKey(st.room)) : '모든방') + '_' + kindsLabel());
+phone.addEventListener('change', () => { if (lists) { st.page = 0; renderTable(); } });
+// 표 머리는 붙어 있는 도구줄 바로 아래에 붙는다 — 도구줄 실제 높이를 따라간다
+const tbar = document.querySelector('.tbar');
+new ResizeObserver(() => document.documentElement.style.setProperty('--tbar-h', tbar.offsetHeight + 'px')).observe(tbar);
+})();
+</script>
+</body>
+</html>
